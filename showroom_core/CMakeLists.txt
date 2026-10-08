@@ -38,6 +38,7 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   foreach(test_name
+      acceptance
       action_policy
       business_logic
       mission_planning
