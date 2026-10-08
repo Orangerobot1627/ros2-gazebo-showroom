@@ -97,6 +97,7 @@ Available profiles:
 | --- | --- |
 | `manual` | **Main mode**: voice control plus the default route; waits for “开始”, then runs the full tour and accepts commands (default) |
 | `demo` | Gazebo with the full two-robot guide scenario started automatically, local voice commands enabled |
+| `qwen` | Main mode backed by the local Qwen model (Ollama) instead of Mock |
 | `headless` | Both robots without Gazebo or RViz windows |
 | `mock` | Headless system with the deterministic Mock LLM |
 | `llm` | Both robots, RViz and Ollama text interaction |
@@ -104,6 +105,15 @@ Available profiles:
 | `navigation` | Gazebo and RViz for two-robot Nav2 development without the business layer |
 | `single` | One guide robot in Gazebo |
 | `single_headless` | One guide robot without GUI windows |
+
+The default keeps the offline Mock backend. `qwen` is the same main mode backed
+by the local Qwen model; the dedicated `showroom_qwen.launch.py` also accepts
+`llm_endpoint:=` and `llm_model:=` for another local service:
+
+```bash
+ros2 launch showroom_bringup showroom_qwen.launch.py \
+  llm_endpoint:=http://127.0.0.1:11434 llm_model:=qwen3.5:4b
+```
 
 List these choices from the installed command, or preview the underlying ROS
 command without starting it:

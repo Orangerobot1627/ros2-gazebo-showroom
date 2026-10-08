@@ -39,6 +39,11 @@ PROFILE_CONFIGS = {
         },
         'description': 'automatic two-robot demonstration with local voice',
     },
+    'qwen': {
+        'launch': 'showroom_qwen.launch.py',
+        'arguments': {},
+        'description': 'main mode backed by the local Qwen model',
+    },
     'headless': {
         'launch': 'dual_robot.launch.py',
         'arguments': {'headless': 'true', 'rviz': 'false'},
