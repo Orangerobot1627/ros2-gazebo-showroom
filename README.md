@@ -153,6 +153,25 @@ The two motion pipelines are isolated as
 collision monitor consumes its robot's own scan and publishes a namespaced
 state topic for the business health monitor.
 
+The collision-monitor stop polygon is a front-focused safety box. It is off by
+default because the accepted guide route passes close to the exhibit walls, so a
+wide side margin makes the robot pause on the panels while Nav2's costmap
+already avoids obstacles. Enable it for a blocked/clearance demonstration with
+`safety_stop_enabled:=true`:
+
+```bash
+ros2 launch showroom_bringup single_robot.launch.py \
+  headless:=true guide_autostart:=true safety_stop_enabled:=true
+```
+
+The accepted Stage behaviour is preserved and covered by tests: the 65-waypoint
+itinerary and seven task units, human override leases, event-driven coffee
+dispatch, task editing, temporary venue visits, and the blocked/clearance
+recovery state machine (`test_nav2_health.py`). A full guide run has completed
+end to end in Gazebo both with the stop polygon disabled and enabled; with it
+enabled, an occasional close panel approach can briefly pause the robot before
+it resumes.
+
 Route colors in Gazebo identify the seven guide task units; the green route is
 reserved for coffee delivery. The yellow guide beacon and magenta service
 beacon move to the current target automatically. Their labels use `G01..G65`

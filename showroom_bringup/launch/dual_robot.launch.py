@@ -67,6 +67,7 @@ def generate_launch_description():
     enable_pose_reset = LaunchConfiguration('enable_pose_reset')
     enable_route_visualization = LaunchConfiguration(
         'enable_route_visualization')
+    safety_stop = LaunchConfiguration('safety_stop_enabled')
     enable_llm = LaunchConfiguration('enable_llm')
     llm_backend = LaunchConfiguration('llm_backend')
     llm_endpoint = LaunchConfiguration('llm_endpoint')
@@ -92,6 +93,9 @@ def generate_launch_description():
         DeclareLaunchArgument('enable_pose_reset', default_value='true'),
         DeclareLaunchArgument(
             'enable_route_visualization', default_value='true'),
+        DeclareLaunchArgument(
+            'safety_stop_enabled', default_value='false',
+            description='Enable the collision monitor stop polygon'),
         DeclareLaunchArgument('enable_llm', default_value='false'),
         DeclareLaunchArgument('llm_backend', default_value='ollama'),
         DeclareLaunchArgument(
@@ -154,10 +158,12 @@ def generate_launch_description():
             include(nav2_launch, {
                 'robot_namespace': 'robot_0',
                 'navigation_params_file': robot_0_navigation,
+                'safety_stop_enabled': safety_stop,
             }),
             include(nav2_launch, {
                 'robot_namespace': 'robot_1',
                 'navigation_params_file': robot_1_navigation,
+                'safety_stop_enabled': safety_stop,
             }),
         ]),
         TimerAction(period=7.0, actions=[

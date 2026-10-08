@@ -9,6 +9,7 @@ from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
+from launch_ros.parameter_descriptions import ParameterValue
 from nav2_common.launch import RewrittenYaml
 
 
@@ -28,6 +29,7 @@ def generate_launch_description():
     params_file = LaunchConfiguration('navigation_params_file')
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart = LaunchConfiguration('autostart')
+    safety_stop_enabled = LaunchConfiguration('safety_stop_enabled')
 
     configured_params = ParameterFile(
         RewrittenYaml(
@@ -66,6 +68,9 @@ def generate_launch_description():
             'navigation_params_file', default_value=default_params),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         DeclareLaunchArgument('autostart', default_value='true'),
+        DeclareLaunchArgument(
+            'safety_stop_enabled', default_value='false',
+            description='Enable the collision monitor stop polygon'),
         Node(
             package='nav2_controller',
             executable='controller_server',
@@ -106,7 +111,13 @@ def generate_launch_description():
             package='nav2_collision_monitor',
             executable='collision_monitor',
             name='collision_monitor',
-            **common,
+            namespace=namespace,
+            output='screen',
+            parameters=[
+                configured_params,
+                {'SafetyStop.enabled': ParameterValue(
+                    safety_stop_enabled, value_type=bool)},
+            ],
         ),
         Node(
             package='nav2_bt_navigator',

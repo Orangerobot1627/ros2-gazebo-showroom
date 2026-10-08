@@ -44,6 +44,7 @@ def generate_launch_description():
     enable_pose_reset = LaunchConfiguration('enable_pose_reset')
     enable_route_visualization = LaunchConfiguration(
         'enable_route_visualization')
+    safety_stop = LaunchConfiguration('safety_stop_enabled')
     rviz = LaunchConfiguration('rviz')
 
     return LaunchDescription([
@@ -69,6 +70,9 @@ def generate_launch_description():
         DeclareLaunchArgument('enable_pose_reset', default_value='true'),
         DeclareLaunchArgument(
             'enable_route_visualization', default_value='true'),
+        DeclareLaunchArgument(
+            'safety_stop_enabled', default_value='false',
+            description='Enable the collision monitor stop polygon'),
         DeclareLaunchArgument(
             'rviz',
             default_value='false',
@@ -104,6 +108,9 @@ def generate_launch_description():
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(navigation_launch),
                     condition=IfCondition(navigation),
+                    launch_arguments={
+                        'safety_stop_enabled': safety_stop,
+                    }.items(),
                 ),
             ],
         ),
