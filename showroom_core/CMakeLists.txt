@@ -22,6 +22,7 @@ install(
     scripts/showroom_action_policy.py
     scripts/showroom_business_logic.py
     scripts/showroom_plan.py
+    scripts/showroom_priority.py
     scripts/showroom_task_units.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -41,6 +42,7 @@ if(BUILD_TESTING)
       monitor_logic
       panel
       plan
+      priority
       speed_profile
       task_action
       task_units)

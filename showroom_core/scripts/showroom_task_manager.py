@@ -19,12 +19,17 @@ from showroom_action_policy import (
     OverrideLeaseBook,
     TemporaryMissionLease,
 )
-from showroom_business_logic import BusinessLogic
+from showroom_business_logic import (
+    ACTIVE_COFFEE_STATES,
+    ACTIVE_GUIDE_STATES,
+    BusinessLogic,
+)
 from showroom_plan import (
     PlanError,
     SequentialPlanExecutor,
     validate_plan,
 )
+from showroom_priority import control_priority
 from showroom_task_units import (
     TaskUnitCatalog,
     TaskUnitError,
@@ -234,6 +239,20 @@ class ShowroomTaskManager(Node):
             elif effect.get('type') == 'announcement':
                 self.publish_json(self.announcement_publisher, effect)
 
+    def control_priority_snapshot(self):
+        """Return the explicit control-priority snapshot for status and panels."""
+        overrides = self.override_leases.snapshot(time.monotonic())
+        active = []
+        if self.logic.guide_state in ACTIVE_GUIDE_STATES:
+            active.append('robot_0')
+        if self.logic.coffee_state in ACTIVE_COFFEE_STATES:
+            active.append('robot_1')
+        return control_priority(
+            list(overrides),
+            self.temporary_guide is not None,
+            active,
+        )
+
     def publish_status(self, reason):
         status = self.logic.snapshot()
         overrides = self.override_leases.snapshot(time.monotonic())
@@ -256,6 +275,7 @@ class ShowroomTaskManager(Node):
                 if self.guide_restore_mission_id is not None else None),
         })
         status.update({'type': 'business_status', 'reason': reason})
+        status['control_priority'] = self.control_priority_snapshot()
         self.publish_json(self.status_publisher, status)
 
     def publish_periodic_status(self):

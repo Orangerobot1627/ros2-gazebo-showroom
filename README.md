@@ -202,6 +202,12 @@ ros2 run showroom_core showroom_panel.py --once   # one frame and exit
 ros2 run showroom_core showroom_panel.py --detail # raw monitor JSON
 ```
 
+The `/showroom/status` document also carries a `control_priority` snapshot that
+makes the task-tree arbitration explicit: `IDLE`, `DEFAULT_ITINERARY`,
+`TEMPORARY_VISIT`, or `HUMAN_OVERRIDE`. A higher level suspends the one below —
+a human override or temporary visit pauses the accepted itinerary and the task
+manager restores it when the override lease expires or the visit ends.
+
 Reset either robot to a validated map-frame pose with:
 
 ```bash

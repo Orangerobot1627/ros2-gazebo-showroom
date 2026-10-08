@@ -35,6 +35,11 @@ BUSINESS_LABELS = {
 
 TITLE = {'robot_0': '蓝色导览', 'robot_1': '绿色配送'}
 
+PRIORITY_LABELS = {
+    'IDLE': '空闲', 'DEFAULT_ITINERARY': '默认导览',
+    'TEMPORARY_VISIT': '临时参观', 'HUMAN_OVERRIDE': '人为接管',
+}
+
 
 def label(table, value):
     """Translate a state value for display, falling back to the raw value."""
@@ -89,6 +94,13 @@ def render_panel(document):
     lines.append(
         f'业务  导览: {label(BUSINESS_LABELS, business.get("guide_state"))}'
         f'   配送: {label(BUSINESS_LABELS, business.get("coffee_state"))}')
+
+    priority = business.get('control_priority') or {}
+    if priority:
+        lines.append(
+            f'控制优先级  {label(PRIORITY_LABELS, priority.get("level"))}'
+            f' (rank {priority.get("rank", "-")})  '
+            f'{priority.get("detail", "")}')
 
     current = business.get('current_task') or {}
     if isinstance(current, dict) and current:

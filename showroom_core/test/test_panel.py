@@ -34,6 +34,10 @@ SAMPLE = {
             'plan_id': 'plan-1', 'state': 'RUNNING',
             'current_step': 1, 'step_total': 3,
         },
+        'control_priority': {
+            'level': 'TEMPORARY_VISIT', 'rank': 2, 'robots': ['robot_0'],
+            'detail': 'temporary visit active',
+        },
     },
     'robots': {
         'robot_0': {
@@ -81,6 +85,7 @@ def main():
     assert '展馆运行面板' in text
     assert '导览: 导览中' in text and '配送: 配送中' in text
     assert '计算机视觉展厅' in text and '3/7' in text
+    assert '控制优先级' in text and '临时参观' in text
     assert 'plan-1' in text and 'RUNNING' in text
     assert '蓝色导览' in text and '导航中' in text
     assert 'vision_inside' in text and '12/64' in text
