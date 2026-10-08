@@ -166,7 +166,7 @@ routes:
       - {x: 5.00, y: -10.00, label: coffee_route_south}
       - {x: 5.00, y: -7.00, label: coffee_route_inner}
       - {x: 3.50, y: -5.30, label: coffee_pickup_approach}
-      - {x: 0.00, y: -4.40, label: coffee_pickup}
+      - {x: 2.00, y: -5.00, label: coffee_pickup}
       - {x: 3.50, y: -5.30, label: coffee_departure}
       - {x: 6.50, y: -7.00, label: coffee_route_east}
       - {x: 9.80, y: -7.80, label: lounge_side_door}
