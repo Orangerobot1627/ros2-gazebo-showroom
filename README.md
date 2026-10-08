@@ -168,6 +168,14 @@ ros2 topic echo /showroom/robot_status \
 
 Each message contains the robot id, global 2D pose, command velocity, LiDAR
 clearance, route progress, blocked duration, recovery state, and Nav2 feedback.
+For a live human-readable view, render the durable monitor stream in a terminal:
+
+```bash
+ros2 run showroom_core showroom_panel.py          # continuous Chinese panel
+ros2 run showroom_core showroom_panel.py --once   # one frame and exit
+ros2 run showroom_core showroom_panel.py --detail # raw monitor JSON
+```
+
 Reset either robot to a validated map-frame pose with:
 
 ```bash

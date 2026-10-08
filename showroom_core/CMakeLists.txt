@@ -11,6 +11,7 @@ install(
 install(
   PROGRAMS
     scripts/showroom_monitor.py
+    scripts/showroom_panel.py
     scripts/showroom_task_manager.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -37,6 +38,7 @@ if(BUILD_TESTING)
       action_policy
       business_logic
       monitor_logic
+      panel
       plan
       task_action
       task_units)
