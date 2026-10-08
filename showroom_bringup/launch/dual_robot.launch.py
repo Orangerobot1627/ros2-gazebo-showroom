@@ -124,7 +124,7 @@ def generate_launch_description():
                 'zh_CN-huayan-medium.onnx')),
         DeclareLaunchArgument('voice_input_target', default_value=''),
         DeclareLaunchArgument('voice_output_target', default_value=''),
-        DeclareLaunchArgument('voice_rms_threshold', default_value='250.0'),
+        DeclareLaunchArgument('voice_rms_threshold', default_value='150.0'),
         DeclareLaunchArgument('rviz', default_value='false'),
         include(world_launch, {
             'headless': headless,

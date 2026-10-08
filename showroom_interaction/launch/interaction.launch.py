@@ -29,6 +29,11 @@ def generate_launch_description():
     voice_input_target = LaunchConfiguration('voice_input_target')
     voice_output_target = LaunchConfiguration('voice_output_target')
     voice_rms_threshold = LaunchConfiguration('voice_rms_threshold')
+    voice_end_silence_ms = LaunchConfiguration('voice_end_silence_ms')
+    voice_adaptive_noise = LaunchConfiguration('voice_adaptive_noise')
+    voice_wake_words = LaunchConfiguration('voice_wake_words')
+    voice_duplicate_window_sec = LaunchConfiguration(
+        'voice_duplicate_window_sec')
     use_sim_time = LaunchConfiguration('use_sim_time')
     voice_environment = {
         'PYTHONPATH': [
@@ -59,7 +64,14 @@ def generate_launch_description():
                 'zh_CN-huayan-medium.onnx')),
         DeclareLaunchArgument('voice_input_target', default_value=''),
         DeclareLaunchArgument('voice_output_target', default_value=''),
-        DeclareLaunchArgument('voice_rms_threshold', default_value='250.0'),
+        DeclareLaunchArgument('voice_rms_threshold', default_value='150.0'),
+        DeclareLaunchArgument('voice_end_silence_ms', default_value='1200'),
+        DeclareLaunchArgument('voice_adaptive_noise', default_value='false'),
+        DeclareLaunchArgument(
+            'voice_wake_words',
+            default_value='开始导览 开始 你好机器人 未来科技展馆'),
+        DeclareLaunchArgument(
+            'voice_duplicate_window_sec', default_value='3.0'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         Node(
             package='showroom_interaction',
@@ -89,6 +101,14 @@ def generate_launch_description():
                 'input_target': ParameterValue(
                     voice_input_target, value_type=str),
                 'rms_threshold': voice_rms_threshold,
+                'end_silence_ms': ParameterValue(
+                    voice_end_silence_ms, value_type=int),
+                'adaptive_noise': ParameterValue(
+                    voice_adaptive_noise, value_type=bool),
+                'wake_words': ParameterValue(
+                    voice_wake_words, value_type=str),
+                'duplicate_window_sec': ParameterValue(
+                    voice_duplicate_window_sec, value_type=float),
             }],
         ),
         Node(
