@@ -298,6 +298,12 @@ def main():
         infer('带我去隧道待三十秒'))['dwell_sec'] == 30.0
     assert command_from_result(infer('导览机器人先停一下')) == {
         'intent': 'pause_tour'}
+    assert command_from_result(infer('两个机器人在第二场馆会和')) == {
+        'intent': 'rendezvous', 'target': 'vision_hall',
+        'dwell_sec': 0.0, 'timeout_sec': 300.0}
+    assert command_from_result(infer('两个机器人在时空隧道碰头待30秒')) == {
+        'intent': 'rendezvous', 'target': 'time_tunnel',
+        'dwell_sec': 30.0, 'timeout_sec': 300.0}
     # A plain "开始导览" must not be mistaken for a robot nickname.
     assert command_from_result(infer('开始导览')) == {
         'intent': 'start_tour', 'coffee': True}

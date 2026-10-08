@@ -11,6 +11,8 @@ import re
 # spuriously match "导览车".
 FUZZY_RATIO = 0.66
 
+MEET_WORDS = ('会和', '会合', '集合', '碰头', '碰面', '汇合', '会面')
+
 
 PLACE_ALIASES = (
     (('计算机视觉馆', '计算机视觉展厅', '视觉馆', '视觉展厅', '视觉区',
@@ -244,6 +246,16 @@ def normalize_semantic_result(document, user_text):
         return {
             'intent': 'deliver_drink', 'drink': drink,
             'target': tasks[0], 'reply': reply}
+    if tasks and any(word in text for word in MEET_WORDS):
+        rendezvous = {
+            'intent': 'rendezvous',
+            'target': tasks[0],
+            'reply': reply,
+        }
+        seconds = parse_duration_sec(text)
+        if seconds is not None:
+            rendezvous['dwell_sec'] = seconds
+        return rendezvous
     travel_request = any(word in text for word in (
         '去', '到', '前往', '带我去', '带我到', '过去', '导航到')) and not any(
             word in text for word in (
@@ -382,6 +394,7 @@ def build_messages(user_text, business=None, monitor=None, knowledge=None):
 - skip_task：跳过一个或多个指定场馆，tasks 是稳定场馆 ID 数组
 - visit_only：只参观指定场馆，tasks 是稳定场馆 ID 数组
 - temporary_visit：临时前往 target 场馆，可带 dwell_sec 停留时间。到达或超时后恢复原导览
+- rendezvous：两台机器人在 target 场馆会合，可带 dwell_sec 停留时间
 - explain_current：讲解 current_task，必须用 summary 生成 reply
 - explain_more：追问当前内容，必须用 detail 生成更详细的 reply
 - execute_plan：一句话同时包含多个任务时使用。plan 是 2..8 个 action 的数组
@@ -406,6 +419,7 @@ def build_messages(user_text, business=None, monitor=None, knowledge=None):
 跳过指定展区：{{"intent":"skip_task","tasks":["robotics_hall"]}}
 只看指定展区：{{"intent":"visit_only","tasks":["vision_hall","dance_hall"]}}
 临时前往并停留：{{"intent":"temporary_visit","target":"time_tunnel","dwell_sec":20}}
+两台机器人和：{{"intent":"rendezvous","target":"robotics_hall","dwell_sec":20}}
 送到指定场馆：{{"intent":"deliver_drink","drink":"coffee","target":"robotics_hall"}}
 绕过当前障碍：{{"intent":"robot_action","robot":"guide","action":"bypass_obstacle"}}
 重新执行当前展区：{{"intent":"repeat_current"}}

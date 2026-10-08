@@ -757,6 +757,40 @@ class ShowroomTaskManager(Node):
         }
         return effect, unit
 
+    def execute_rendezvous(self, target, dwell_sec=None, timeout_sec=None):
+        """Send the guide and the coffee robot to meet at one venue.
+
+        The guide takes a bounded temporary visit so its itinerary resumes
+        afterwards; the coffee robot runs a service visit to the same venue.
+        Both are preflighted before any state changes so a busy robot rejects
+        the whole request cleanly.
+        """
+        if self.navigation_backend != 'nav2':
+            raise TaskUnitError('两台机器人会和当前需要 Nav2 后端')
+        unit = self.task_units.catalog.resolve(target)
+        if self.temporary_guide is not None:
+            raise TaskUnitError('已有临时导航任务正在执行')
+        if self.guide_restore_mission_id is not None:
+            raise TaskUnitError('正在返回被暂停的主任务，请稍后再发会和指令')
+        if self.logic.state_for('robot_0') not in (
+                'RECEPTION', 'TOURING', 'GOING_TO_LOUNGE',
+                'PAUSED', 'BLOCKED'):
+            raise TaskUnitError('蓝色导览机器人当前没有可暂停的主任务')
+        if self.logic.coffee_state in (
+                'TO_PICKUP', 'PICKUP', 'DELIVERING', 'DELIVERED',
+                'RETURNING', 'PAUSED', 'BLOCKED'):
+            raise TaskUnitError('绿色服务机器人已有配送任务')
+        dwell = self.action_policy.dwell_duration(dwell_sec)
+        timeout = self.action_policy.navigation_timeout(timeout_sec)
+        guide_effect, _ = self.start_temporary_visit(
+            target, dwell_sec=dwell, timeout_sec=timeout)
+        coffee_effect, _ = self.delivery_effect(
+            target, self.logic.beverage or 'drink')
+        return (
+            [guide_effect, coffee_effect],
+            f'两台机器人前往 {unit.display_name} 会和',
+        )
+
     def restore_temporary_guide(self, reason):
         """Restore the exact suspended itinerary after a temporary visit."""
         lease = self.temporary_guide
@@ -1026,6 +1060,11 @@ class ShowroomTaskManager(Node):
             detail = (
                 f'{document.get("drink", "coffee")} delivery to '
                 f'{unit.display_name}')
+        elif intent == 'rendezvous':
+            effects, detail = self.execute_rendezvous(
+                document.get('target'),
+                dwell_sec=document.get('dwell_sec'),
+                timeout_sec=document.get('timeout_sec'))
         elif intent in ('explain_current', 'explain_more'):
             effects = []
             detail = self.task_units.explanation(

@@ -25,6 +25,7 @@ COMMAND_INTENTS = {
     'skip_task',
     'visit_only',
     'temporary_visit',
+    'rendezvous',
 }
 NON_COMMAND_INTENTS = {'ask_status', 'chat'}
 ALLOWED_INTENTS = COMMAND_INTENTS | NON_COMMAND_INTENTS
@@ -55,6 +56,7 @@ DEFAULT_REPLIES = {
     'skip_task': '好的，已从后续导览中移除指定场馆。',
     'visit_only': '好的，已按您选择的场馆重新规划导览。',
     'temporary_visit': '好的，我先前往指定展区，完成后会继续原导览任务。',
+    'rendezvous': '好的，两台机器人将前往指定场馆会和。',
     'ask_status': '我已经读取当前任务状态，请查看机器人运行信息。',
     'chat': '我目前可以帮助您开始、暂停或继续导览，也可以安排咖啡服务。',
 }
@@ -199,6 +201,22 @@ def validate_model_result(document):
                     f'temporary_visit 的 {field} 必须在 '
                     f'{minimum:g}..{maximum:g} 秒')
             result[field] = float(value)
+    if intent == 'rendezvous':
+        target = str(document.get('target', '')).strip()
+        if target not in ALLOWED_TASKS:
+            raise LLMOutputError('rendezvous 的 target 必须是有效场馆 ID')
+        result['target'] = target
+        for field, minimum, maximum, default in (
+                ('dwell_sec', 0.0, 120.0, 0.0),
+                ('timeout_sec', 1.0, 600.0, 300.0)):
+            value = document.get(field, default)
+            if (not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not minimum <= float(value) <= maximum):
+                raise LLMOutputError(
+                    f'rendezvous 的 {field} 必须在 '
+                    f'{minimum:g}..{maximum:g} 秒')
+            result[field] = float(value)
     if intent in ('explain_current', 'explain_more'):
         if not model_supplied_reply:
             raise LLMOutputError(f'{intent} 必须包含基于当前任务的 reply')
@@ -234,6 +252,12 @@ def command_from_result(result):
     if result['intent'] in ('skip_task', 'visit_only'):
         command['tasks'] = result['tasks']
     if result['intent'] == 'temporary_visit':
+        command.update({
+            'target': result['target'],
+            'dwell_sec': result['dwell_sec'],
+            'timeout_sec': result['timeout_sec'],
+        })
+    if result['intent'] == 'rendezvous':
         command.update({
             'target': result['target'],
             'dwell_sec': result['dwell_sec'],

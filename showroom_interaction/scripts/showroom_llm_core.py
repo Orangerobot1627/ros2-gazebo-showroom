@@ -159,7 +159,16 @@ class MockBackend:
             '多待', '多呆', '停留', '待一会', '呆一会'))
         drink_request = detect_drink(user_text) is not None
         delivery_verb = has_delivery_verb(user_text)
-        if stay_request and drink_request:
+        meet_request = any(word in user_text for word in (
+            '会和', '会合', '集合', '碰头', '碰面', '汇合', '会面'))
+        if meet_request:
+            result = {
+                'intent': 'rendezvous',
+                'target': resolve_delivery_target(user_text) or 'lounge',
+            }
+            if duration is not None:
+                result['dwell_sec'] = duration
+        elif stay_request and drink_request:
             pause = {'action': 'pause', 'robot': 'guide'}
             if duration is not None:
                 pause['duration_sec'] = duration
