@@ -611,7 +611,8 @@ class ShowroomTaskManager(Node):
             remaining_ids = previous_itinerary[target_position:]
             self.task_units.set_itinerary(
                 remaining_ids, skipped=skipped, last_edit=intent)
-            effects.append(self.guide_navigation_effect(remaining_ids))
+            effects.append(self.guide_navigation_effect(
+                remaining_ids, allow_shortcuts=True))
         else:
             effects.append(route_effect)
         if intent == 'repeat_current':
@@ -670,7 +671,8 @@ class ShowroomTaskManager(Node):
             'beverage': self.logic.beverage or 'coffee',
         }
 
-    def guide_navigation_effect(self, task_ids, resume_task_id=None):
+    def guide_navigation_effect(self, task_ids, resume_task_id=None,
+                                allow_shortcuts=False):
         """Create one replaceable semantic Nav2 guide itinerary."""
         return {
             'type': 'navigation_request',
@@ -681,6 +683,7 @@ class ShowroomTaskManager(Node):
             'start': self.robot_locations.get('robot_0', 'entrance'),
             'task_ids': list(task_ids),
             'resume_task_id': resume_task_id,
+            'allow_shortcuts': bool(allow_shortcuts),
         }
 
     def remaining_guide_task_ids(self):
@@ -750,6 +753,7 @@ class ShowroomTaskManager(Node):
             'mission_id': mission_id,
             'start': self.robot_locations.get('robot_0', 'entrance'),
             'target_task': unit.task_id,
+            'allow_shortcuts': True,
         }
         return effect, unit
 
@@ -843,7 +847,8 @@ class ShowroomTaskManager(Node):
                 if previous_current is not None
                 and previous_current.task_id in {
                     unit.task_id for unit in selected}
-                else None))
+                else None),
+            allow_shortcuts=True)
         mission_id = effect['mission_id']
         names = '、'.join(unit.display_name for unit in selected)
         return [effect], f'guide itinerary {mission_id}: {names}'

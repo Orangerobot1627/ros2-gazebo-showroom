@@ -98,10 +98,78 @@ class DistanceCostModel:
         return cost
 
 
+def normalize_angle(angle):
+    """Wrap an angle to (-pi, pi]."""
+    angle = float(angle)
+    while angle <= -math.pi:
+        angle += 2.0 * math.pi
+    while angle > math.pi:
+        angle -= 2.0 * math.pi
+    return angle
+
+
+class WeightedCostModel:
+    """Weighted edge cost with distance, penalty, connector and turn terms.
+
+    This is a compact, dependency-free analogue of the Nav2 Route Server edge
+    scorers: distance stands in for the distance/speed scorer, ``penalty``
+    for the metadata penalty scorer, ``connector_discount`` for a main-artery
+    preference, and ``turn_cost`` for the start/goal orientation scorers that
+    keep the route from doubling back.
+    """
+
+    def __init__(self, distance_weight=1.0, connector_penalty=0.0,
+                 penalty_weight=1.0, connector_discount=0.0,
+                 turn_weight=0.0, time_weight=0.0, time_lookup=None):
+        self.distance_weight = float(distance_weight)
+        self.connector_penalty = float(connector_penalty)
+        self.penalty_weight = float(penalty_weight)
+        self.connector_discount = float(connector_discount)
+        self.turn_weight = float(turn_weight)
+        self.time_weight = float(time_weight)
+        self.time_lookup = time_lookup
+        for value, name in (
+                (self.distance_weight, 'distance_weight'),
+                (self.connector_penalty, 'connector_penalty'),
+                (self.penalty_weight, 'penalty_weight'),
+                (self.connector_discount, 'connector_discount'),
+                (self.turn_weight, 'turn_weight'),
+                (self.time_weight, 'time_weight')):
+            if value < 0.0 or not math.isfinite(value):
+                raise NavigationError(f'Invalid route cost profile: {name}')
+        if self.distance_weight <= 0.0:
+            raise NavigationError('route distance_weight must be positive')
+
+    def edge_cost(self, distance_m, metadata, context=None):
+        penalty = self.connector_penalty if metadata.get('connector') else 0.0
+        dynamic_penalties = (context or {}).get('edge_penalties') or {}
+        edge_id = metadata.get('edge_id')
+        penalty += float(dynamic_penalties.get(edge_id, 0.0))
+        penalty += self.penalty_weight * float(metadata.get('penalty', 0.0))
+        cost = self.distance_weight * float(distance_m) + penalty
+        if metadata.get('connector'):
+            cost -= self.connector_discount * float(distance_m)
+        if self.time_weight > 0.0 and self.time_lookup is not None:
+            seconds = self.time_lookup(edge_id)
+            if seconds is not None and math.isfinite(float(seconds)):
+                cost += self.time_weight * float(seconds)
+        if cost < 0.0 or not math.isfinite(cost):
+            raise NavigationError(f'Invalid edge cost for {edge_id!r}')
+        return cost
+
+    def turn_cost(self, incoming_heading, outgoing_heading):
+        """Cost of turning from one edge heading to the next."""
+        if self.turn_weight <= 0.0:
+            return 0.0
+        return self.turn_weight * abs(
+            normalize_angle(outgoing_heading - incoming_heading))
+
+
 class GraphRoutePlanner:
     """Plan shortest semantic routes over validated showroom corridors."""
 
-    def __init__(self, graph_document, route_document, cost_model=None):
+    def __init__(self, graph_document, route_document, cost_model=None,
+                 edge_times=None):
         if not isinstance(graph_document, dict):
             raise NavigationError('Navigation graph configuration must be a mapping')
         routes = (route_document or {}).get('routes') or {}
@@ -115,13 +183,18 @@ class GraphRoutePlanner:
         self.pickup = str(service.get('pickup', '')).strip()
 
         profile_name = 'shortest'
-        profile = (graph_document.get('cost_profiles') or {}).get(
-            profile_name, {})
-        self.cost_model = cost_model or DistanceCostModel(
-            profile.get('distance_weight', 1.0),
-            profile.get('connector_penalty', 0.0),
-        )
-        self.cost_profile = profile_name
+        self.cost_models = self._build_cost_models(
+            graph_document, cost_model,
+            time_lookup=(edge_times.time_for
+                         if edge_times is not None else None))
+        self.default_profile = str(
+            graph_document.get('default_cost_profile', '') or 'shortest')
+        if self.default_profile not in self.cost_models:
+            self.default_profile = (
+                'shortest' if 'shortest' in self.cost_models
+                else next(iter(self.cost_models)))
+        self.cost_model = self.cost_models[self.default_profile]
+        self.cost_profile = self.default_profile
 
         sources = graph_document.get('route_sources') or []
         if not sources:
@@ -166,13 +239,39 @@ class GraphRoutePlanner:
             raise NavigationError(f'Unknown configured navigation nodes: {missing}')
 
     @classmethod
-    def from_files(cls, graph_path, route_path, cost_model=None):
+    def from_files(cls, graph_path, route_path, cost_model=None,
+                   edge_times=None):
         """Load graph and route YAML files."""
         graph_document = yaml.safe_load(
             Path(graph_path).read_text(encoding='utf-8')) or {}
         route_document = yaml.safe_load(
             Path(route_path).read_text(encoding='utf-8')) or {}
-        return cls(graph_document, route_document, cost_model=cost_model)
+        return cls(graph_document, route_document, cost_model=cost_model,
+                   edge_times=edge_times)
+
+    @staticmethod
+    def _build_cost_models(graph_document, cost_model, time_lookup=None):
+        """Build the selectable edge-cost profiles for the graph."""
+        if cost_model is not None:
+            return {'custom': cost_model}
+        profiles = graph_document.get('cost_profiles') or {}
+        models = {}
+        for name, specification in profiles.items():
+            if not isinstance(specification, dict):
+                specification = {}
+            models[str(name)] = WeightedCostModel(
+                distance_weight=specification.get('distance_weight', 1.0),
+                connector_penalty=specification.get('connector_penalty', 0.0),
+                penalty_weight=specification.get('penalty_weight', 1.0),
+                connector_discount=specification.get(
+                    'connector_discount', 0.0),
+                turn_weight=specification.get('turn_weight', 0.0),
+                time_weight=specification.get('time_weight', 0.0),
+                time_lookup=time_lookup,
+            )
+        if not models:
+            models['shortest'] = WeightedCostModel(1.0, 0.0)
+        return models
 
     def _add_node(self, item):
         if not isinstance(item, dict):
@@ -218,9 +317,19 @@ class GraphRoutePlanner:
             raise NavigationError(f'No delivery target for task: {task_id!r}')
         return target
 
-    def _shortest_segment(self, start, goal, context=None):
+    def _heading(self, start, goal):
+        """Return the heading (radians) of the edge start -> goal."""
+        a = self.nodes[start]
+        b = self.nodes[goal]
+        return math.atan2(b['y'] - a['y'], b['x'] - a['x'])
+
+    def _shortest_segment(self, start, goal, context=None, model=None):
+        context = context or {}
+        model = model or self.cost_model
         if start not in self.nodes or goal not in self.nodes:
             raise NavigationError(f'Unknown route endpoint: {start!r} -> {goal!r}')
+        allow_connectors = bool(context.get('allow_connectors'))
+        start_heading = context.get('start_heading')
         queue = [(0.0, 0.0, start)]
         best_cost = {start: 0.0}
         best_distance = {start: 0.0}
@@ -233,16 +342,25 @@ class GraphRoutePlanner:
                 break
             for neighbor, (edge_distance, metadata) in self.edges[current].items():
                 allowed = metadata.get('allowed_robots') or ()
-                if allowed and (context or {}).get('robot_id') not in allowed:
+                if allowed and context.get('robot_id') not in allowed:
                     continue
                 allowed_requests = (
                     metadata.get('allowed_request_types') or ())
-                if (allowed_requests
-                        and (context or {}).get('request_type')
+                if (allowed_requests and not allow_connectors
+                        and context.get('request_type')
                         not in allowed_requests):
                     continue
-                edge_cost = self.cost_model.edge_cost(
+                edge_cost = model.edge_cost(
                     edge_distance, metadata, context=context)
+                incoming = None
+                previous_node = previous.get(current)
+                if previous_node is not None:
+                    incoming = self._heading(previous_node, current)
+                elif current == start and start_heading is not None:
+                    incoming = float(start_heading)
+                if incoming is not None:
+                    edge_cost += model.turn_cost(
+                        incoming, self._heading(current, neighbor))
                 candidate = cost + edge_cost
                 if candidate + 1e-9 < best_cost.get(neighbor, math.inf):
                     best_cost[neighbor] = candidate
@@ -262,16 +380,19 @@ class GraphRoutePlanner:
 
     def plan(self, stops, context=None):
         """Optimize each leg and concatenate an ordered multi-stop mission."""
+        context = context or {}
         stops = [str(item).strip() for item in stops]
         if len(stops) < 2 or any(not item for item in stops):
             raise NavigationError('A route plan needs at least two named stops')
+        profile = str(context.get('cost_profile') or self.default_profile)
+        model = self.cost_models.get(profile) or self.cost_model
         full_nodes = []
         stop_indices = []
         total_distance = 0.0
         total_cost = 0.0
         for start, goal in zip(stops, stops[1:]):
             segment, distance, cost = self._shortest_segment(
-                start, goal, context=context)
+                start, goal, context=context, model=model)
             if full_nodes:
                 segment = segment[1:]
             full_nodes.extend(segment)
@@ -285,7 +406,7 @@ class GraphRoutePlanner:
             stop_indices=tuple(stop_indices),
             distance_m=round(total_distance, 3),
             cost=round(total_cost, 3),
-            cost_profile=self.cost_profile,
+            cost_profile=profile,
         )
 
     def plan_delivery(self, task_id, start=None, context=None):
@@ -311,7 +432,13 @@ def build_delivery_plan(planner, request):
     start = str(request.get('start', planner.standby)).strip()
     if not mission_id or not task_id:
         raise NavigationError('Delivery request needs mission_id and service_target')
-    route = planner.plan_delivery(task_id, start=start)
+    route = planner.plan_delivery(
+        task_id, start=start,
+        context={
+            'allow_connectors': bool(request.get('allow_shortcuts')),
+            'cost_profile': request.get('cost_profile'),
+            'start_heading': request.get('start_heading'),
+        })
     waypoints = [dict(item) for item in route.waypoints]
     pickup_index, delivery_index, standby_index = route.stop_indices
     for item in waypoints:
@@ -383,9 +510,14 @@ def build_guide_plan(planner, request, task_catalog):
                 stop_metadata.append((unit.task_id, phase))
             elif stop_metadata:
                 stop_metadata[-1] = (unit.task_id, phase)
+    allow_shortcuts = bool(request.get('allow_shortcuts'))
     route = planner.plan(stops, context={
         'robot_id': 'robot_0',
         'request_type': 'guide_itinerary',
+        'allow_connectors': allow_shortcuts,
+        'cost_profile': request.get('cost_profile') or (
+            'smart' if allow_shortcuts else None),
+        'start_heading': request.get('start_heading'),
     })
     waypoints = [dict(item) for item in route.waypoints]
     for item in waypoints:
@@ -441,6 +573,9 @@ def build_temporary_visit_plan(planner, request, task_catalog):
         [start, destination], context={
             'robot_id': 'robot_0',
             'request_type': 'temporary_visit',
+            'allow_connectors': bool(request.get('allow_shortcuts')),
+            'cost_profile': request.get('cost_profile'),
+            'start_heading': request.get('start_heading'),
         })
     nodes = list(route.nodes)
     waypoints = [dict(item) for item in route.waypoints]

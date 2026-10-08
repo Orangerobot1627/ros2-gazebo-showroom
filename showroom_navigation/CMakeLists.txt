@@ -11,6 +11,7 @@ install(
 install(
   PROGRAMS
     scripts/showroom_default_mission.py
+    scripts/showroom_edge_recorder.py
     scripts/showroom_navigation_gateway.py
     scripts/showroom_nav2_adapter.py
     scripts/showroom_route_visualizer.py
@@ -19,6 +20,7 @@ install(
 
 install(
   FILES
+    scripts/showroom_edge_times.py
     scripts/showroom_navigation.py
     scripts/showroom_nav2_health.py
     scripts/showroom_task_units.py
@@ -38,6 +40,14 @@ if(BUILD_TESTING)
     showroom_navigation_graph
     COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_CURRENT_SOURCE_DIR}/test/test_navigation.py
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+    TIMEOUT 30
+  )
+
+  ament_add_test(
+    showroom_edge_times
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/test_edge_times.py
     GENERATE_RESULT_FOR_RETURN_CODE_ZERO
     TIMEOUT 30
   )

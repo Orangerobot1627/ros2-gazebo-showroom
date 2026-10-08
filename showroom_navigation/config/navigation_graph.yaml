@@ -48,3 +48,21 @@ cost_profiles:
   shortest:
     distance_weight: 1.0
     connector_penalty: 0.0
+  # The smart profile is selected for human-initiated missions. It keeps the
+  # validated distance cost, mildly prefers the map-checked central connectors
+  # so the robot takes a visible short cut, and penalizes sharp reversals so
+  # the route does not double back. Stability still comes first: only edges
+  # already validated at build time are used.
+  smart:
+    distance_weight: 1.0
+    connector_penalty: 0.0
+    turn_weight: 0.8
+    connector_discount: 0.4
+  # The learned profile folds the observed traversal seconds recorded by
+  # showroom_edge_recorder into the cost (Nav2 TimeMarker/TimeScorer analogue).
+  # Until times are recorded it behaves like the distance profile.
+  learned:
+    distance_weight: 1.0
+    time_weight: 6.0
+
+default_cost_profile: shortest

@@ -15,7 +15,9 @@ from showroom_navigation import (  # noqa: E402,I100
     build_guide_plan,
     build_temporary_visit_plan,
     GraphRoutePlanner,
+    normalize_angle,
     semantic_targets_from_plan,
+    WeightedCostModel,
 )
 from showroom_task_units import TaskUnitCatalog  # noqa: E402
 
@@ -154,6 +156,59 @@ def main():
     temporary_targets = semantic_targets_from_plan(temporary)
     assert temporary_targets[-1]['task_id'] == 'time_tunnel'
     assert temporary_targets[-1]['task_phase'] == 'temporary_destination'
+
+    # Human-initiated missions may use the map-validated connectors. The same
+    # leg is much shorter when shortcuts are allowed, and the smart profile is
+    # selected so the route also avoids doubling back.
+    guide_context = {'robot_id': 'robot_0', 'request_type': 'guide_itinerary'}
+    corridor = planner.plan(
+        ['vision_hall_entry', 'vision_exit'], context=guide_context)
+    shortcut = planner.plan(
+        ['vision_hall_entry', 'vision_exit'], context={
+            **guide_context,
+            'allow_connectors': True,
+            'cost_profile': 'smart',
+        })
+    assert shortcut.nodes == (
+        'vision_hall_entry', 'vision_loop_close', 'vision_exit'), shortcut.nodes
+    assert shortcut.distance_m < corridor.distance_m
+    assert len(shortcut.nodes) < len(corridor.nodes)
+    assert shortcut.cost_profile == 'smart'
+    assert corridor.cost_profile == 'shortest'
+
+    shortcut_guide = build_guide_plan(planner, {
+        'robot_id': 'robot_0',
+        'mission_id': 'guide-shortcut',
+        'start': 'entrance',
+        'task_ids': ['vision_hall', 'lounge'],
+        'allow_shortcuts': True,
+    }, catalog)
+    plain_guide = build_guide_plan(planner, {
+        'robot_id': 'robot_0',
+        'mission_id': 'guide-plain',
+        'start': 'entrance',
+        'task_ids': ['vision_hall', 'lounge'],
+    }, catalog)
+    assert shortcut_guide['cost_profile'] == 'smart'
+    assert plain_guide['cost_profile'] == 'shortest'
+    assert shortcut_guide['distance_m'] <= plain_guide['distance_m']
+
+    # Cost-model components: turn angle, connector discount, metadata penalty.
+    model = WeightedCostModel(distance_weight=1.0, turn_weight=1.0,
+                              connector_discount=0.5, penalty_weight=1.0)
+    assert model.turn_cost(0.0, 0.0) == 0.0
+    assert abs(model.turn_cost(0.0, 3.141592653589793) - 3.141592653589793) < 1e-9
+    assert abs(normalize_angle(2.0 * 3.141592653589793)) < 1e-9
+    assert model.edge_cost(10.0, {'connector': True, 'edge_id': 'c'}) < \
+        model.edge_cost(10.0, {'connector': False, 'edge_id': 'r'})
+    assert model.edge_cost(10.0, {'penalty': 5.0, 'edge_id': 'p'}) == 15.0
+    try:
+        WeightedCostModel(distance_weight=0.0)
+    except Exception:
+        pass
+    else:
+        raise AssertionError('zero distance_weight must be rejected')
+
     print(f'Navigation graph delivery routes: OK {distances}')
 
 

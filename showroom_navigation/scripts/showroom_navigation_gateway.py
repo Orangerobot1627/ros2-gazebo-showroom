@@ -9,6 +9,7 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from showroom_edge_times import EdgeTimeModel
 from showroom_navigation import (
     build_delivery_plan,
     build_guide_plan,
@@ -34,6 +35,7 @@ class ShowroomNavigationGateway(Node):
         self.declare_parameter(
             'route_command_topic', '/showroom/route_commands')
         self.declare_parameter('nav2_plan_topic', '/showroom/nav2_plans')
+        self.declare_parameter('edge_times_file', '')
 
         self.backend = str(self.get_parameter('backend').value).strip()
         if self.backend not in ('stage_graph', 'nav2'):
@@ -47,7 +49,13 @@ class ShowroomNavigationGateway(Node):
         routes_path = (
             Path(routes_value).expanduser() if routes_value
             else share / 'config' / 'routes.yaml')
-        self.planner = GraphRoutePlanner.from_files(graph_path, routes_path)
+        self.planner = GraphRoutePlanner.from_files(
+            graph_path, routes_path,
+            edge_times=(
+                EdgeTimeModel.load(
+                    str(self.get_parameter('edge_times_file').value).strip())
+                if str(self.get_parameter('edge_times_file').value).strip()
+                else None))
         self.task_catalog = TaskUnitCatalog.from_files(
             share / 'config' / 'task_units.yaml', routes_path)
 

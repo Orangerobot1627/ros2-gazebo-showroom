@@ -45,6 +45,8 @@ def generate_launch_description():
     enable_route_visualization = LaunchConfiguration(
         'enable_route_visualization')
     safety_stop = LaunchConfiguration('safety_stop_enabled')
+    enable_edge_learning = LaunchConfiguration('enable_edge_learning')
+    edge_times_file = LaunchConfiguration('edge_times_file')
     rviz = LaunchConfiguration('rviz')
 
     return LaunchDescription([
@@ -73,6 +75,11 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'safety_stop_enabled', default_value='false',
             description='Enable the collision monitor stop polygon'),
+        DeclareLaunchArgument(
+            'enable_edge_learning', default_value='false',
+            description='Record edge traversal times for route cost learning'),
+        DeclareLaunchArgument(
+            'edge_times_file', default_value='/tmp/showroom_edge_times.yaml'),
         DeclareLaunchArgument(
             'rviz',
             default_value='false',
@@ -126,6 +133,8 @@ def generate_launch_description():
                         'enable_robot_1': 'false',
                         'enable_route_visualization': (
                             enable_route_visualization),
+                        'enable_edge_learning': enable_edge_learning,
+                        'edge_times_file': edge_times_file,
                         'use_sim_time': 'true',
                     }.items(),
                 ),

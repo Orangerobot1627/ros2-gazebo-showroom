@@ -160,6 +160,22 @@ the robot eases through corners instead of lurching. Disable it with
 `enable_speed_profile:=false` (the monitor then reads `cmd_vel_smoothed`
 directly).
 
+Semantic routing uses a validated graph with pluggable edge-cost profiles. The
+`shortest` profile is the accepted tour; the `smart` profile adds a turn penalty
+(so the route does not double back) and a mild preference for the map-checked
+central connectors. Human-initiated missions — temporary visits and guide
+edits such as skip or visit-only — set `allow_shortcuts` and run on `smart`, so
+they take a visible short cut while still using only build-time-validated
+corridors. Enable `learned` edge costs recorded from real runs on top with:
+
+```bash
+ros2 launch showroom_bringup single_robot.launch.py \
+  enable_edge_learning:=true edge_times_file:=/tmp/showroom_edge_times.yaml
+```
+
+The recorder learns an exponential moving average of the seconds each
+directed edge takes and the gateway folds it into the `learned` profile.
+
 The collision-monitor stop polygon is a front-focused safety box. It is off by
 default because the accepted guide route passes close to the exhibit walls, so a
 wide side margin makes the robot pause on the panels while Nav2's costmap

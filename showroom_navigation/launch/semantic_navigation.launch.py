@@ -16,6 +16,8 @@ def generate_launch_description():
     enable_robot_1 = LaunchConfiguration('enable_robot_1')
     enable_route_visualization = LaunchConfiguration(
         'enable_route_visualization')
+    enable_edge_learning = LaunchConfiguration('enable_edge_learning')
+    edge_times_file = LaunchConfiguration('edge_times_file')
     use_sim_time = LaunchConfiguration('use_sim_time')
 
     return LaunchDescription([
@@ -25,6 +27,12 @@ def generate_launch_description():
         DeclareLaunchArgument('enable_robot_1', default_value='false'),
         DeclareLaunchArgument(
             'enable_route_visualization', default_value='true'),
+        DeclareLaunchArgument(
+            'enable_edge_learning', default_value='false',
+            description='Record edge traversal times for route cost learning'),
+        DeclareLaunchArgument(
+            'edge_times_file', default_value='/tmp/showroom_edge_times.yaml',
+            description='Learned edge-time file shared by recorder and gateway'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         Node(
             package='showroom_navigation',
@@ -41,6 +49,18 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'backend': 'nav2',
+                'use_sim_time': use_sim_time,
+                'edge_times_file': edge_times_file,
+            }],
+        ),
+        Node(
+            package='showroom_navigation',
+            executable='showroom_edge_recorder.py',
+            name='showroom_edge_recorder',
+            output='screen',
+            condition=IfCondition(enable_edge_learning),
+            parameters=[{
+                'output_file': edge_times_file,
                 'use_sim_time': use_sim_time,
             }],
         ),
