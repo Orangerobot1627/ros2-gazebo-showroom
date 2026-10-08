@@ -96,15 +96,15 @@ def main():
 
     # Wake word gating: an empty list disables the gate (legacy behaviour).
     open_gate = WakeWordGate(wake_words=[], session_sec=10.0)
-    assert open_gate.filter('随便说点什么', now=0.0)[0] is True
+    assert open_gate.accept('随便说点什么', now=0.0)[0] is True
     gate = WakeWordGate(wake_words=['开始', '开始导览'], session_sec=10.0)
-    assert gate.filter('不知道说什么', now=1.0) == (
+    assert gate.accept('不知道说什么', now=1.0) == (
         False, '不知道说什么', 'wake_required')
-    accepted, text, reason = gate.filter('开始导览', now=2.0)
+    accepted, text, reason = gate.accept('开始导览', now=2.0)
     assert accepted and reason == 'wake_word' and text == '开始导览'
-    accepted, text, reason = gate.filter('跳过科技舞蹈展厅', now=5.0)
+    accepted, text, reason = gate.accept('跳过科技舞蹈展厅', now=5.0)
     assert accepted and reason == 'session'
-    assert gate.filter('继续参观', now=50.0)[0] is False
+    assert gate.accept('继续参观', now=50.0)[0] is False
 
     # Repeated identical commands are suppressed within the window.
     dedup = DuplicateSuppressor(window_sec=5.0)

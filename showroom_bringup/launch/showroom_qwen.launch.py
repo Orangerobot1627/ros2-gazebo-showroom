@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Main showroom mode backed by the local Qwen model instead of Mock.
+"""
+Main showroom mode backed by the local Qwen model instead of Mock.
 
 Same behaviour as the default profile — say "开始" and the robot runs the
 default itinerary while accepting higher-priority voice commands — but the

@@ -5,14 +5,13 @@ from pathlib import Path
 import sys
 import tempfile
 
-import yaml
-
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 
 from showroom_edge_times import EdgeTimeModel  # noqa: E402
 from showroom_navigation import WeightedCostModel  # noqa: E402
+import yaml  # noqa: E402
 
 
 def main():

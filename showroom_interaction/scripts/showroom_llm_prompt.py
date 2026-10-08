@@ -62,7 +62,7 @@ def _exact_present(text, aliases):
 
 
 def _fuzzy_present(text, aliases):
-    """True when a position-wise near-match of any alias appears."""
+    """Return True when a position-wise near-match of any alias appears."""
     for alias in aliases:
         size = len(alias)
         if size < 2 or len(text) < size:

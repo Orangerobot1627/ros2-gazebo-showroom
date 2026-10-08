@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Validate the ROS and Gazebo descriptions against the frozen Stage robot."""
 
-from pathlib import Path
 import math
+from pathlib import Path
 import subprocess
 import xml.etree.ElementTree as ET
 
@@ -79,7 +79,8 @@ def visual_xy_box(visual):
 
 
 def assert_scan_plane_clear(model):
-    """Fail if a body visual intrudes into the lidar field of view.
+    """
+    Fail if a body visual intrudes into the lidar field of view.
 
     Gazebo's gpu_lidar renders visual geometry, so any body part inside the
     +/-FOV/2 scan cone is reported as an obstacle at close range and trips the

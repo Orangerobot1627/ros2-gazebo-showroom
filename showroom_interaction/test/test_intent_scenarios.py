@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Data-driven intent regression suite for the showroom language layer.
+"""
+Data-driven intent regression suite for the showroom language layer.
 
 Each case runs the same pipeline as `showroom_llm_bridge`: Mock model output,
 then the multi-task and semantic normalizers, then contract validation. The

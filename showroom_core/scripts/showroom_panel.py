@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Human-readable operator panel for the showroom monitor stream.
+"""
+Human-readable operator panel for the showroom monitor stream.
 
 The panel is a thin renderer over the durable `/showroom/monitor` JSON
 document published by `showroom_monitor`; it owns no business state. Use

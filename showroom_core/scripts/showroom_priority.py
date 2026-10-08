@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Explicit control-priority ladder for the showroom task tree.
+"""
+Explicit control-priority ladder for the showroom task tree.
 
 The task tree arbitrates three levels for the guide robot:
 
@@ -28,7 +29,8 @@ IDLE_DETAIL = 'no active mission'
 
 
 def control_priority(override_robots, temporary_active, active_robots):
-    """Return the control-priority snapshot for the task tree.
+    """
+    Return the control-priority snapshot for the task tree.
 
     ``override_robots`` are robots under a human override lease,
     ``temporary_active`` marks an in-flight temporary visit, and

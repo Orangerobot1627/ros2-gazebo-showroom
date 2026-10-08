@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Learned per-edge traversal times for the semantic route graph.
+"""
+Learned per-edge traversal times for the semantic route graph.
 
 This is the lightweight "auto-calibrate the weights" step: instead of setting a
 travel-time cost by hand, the model records an exponential moving average of the

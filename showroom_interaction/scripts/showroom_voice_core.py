@@ -152,7 +152,8 @@ HALLUCINATION_PHRASES = (
 
 
 class WakeWordGate:
-    """Require a wake word before forwarding commands, with a session window.
+    """
+    Require a wake word before forwarding commands, with a session window.
 
     An empty wake-word list disables gating, so every transcript is forwarded
     (the legacy behaviour). Once a transcript contains a wake word the gate
@@ -170,7 +171,7 @@ class WakeWordGate:
     def enabled(self):
         return bool(self.wake_words)
 
-    def filter(self, text, now):
+    def accept(self, text, now):
         """Return (accepted, text, reason) for one transcript."""
         text = (text or '').strip()
         if not text:

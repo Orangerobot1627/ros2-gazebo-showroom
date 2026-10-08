@@ -24,6 +24,7 @@ from showroom_business_logic import (
     ACTIVE_GUIDE_STATES,
     BusinessLogic,
 )
+from showroom_interfaces.action import ExecuteShowroomTask
 from showroom_plan import (
     PlanError,
     SequentialPlanExecutor,
@@ -35,7 +36,6 @@ from showroom_task_units import (
     TaskUnitError,
     TaskUnitTracker,
 )
-from showroom_interfaces.action import ExecuteShowroomTask
 from std_msgs.msg import String
 
 
@@ -294,7 +294,8 @@ class ShowroomTaskManager(Node):
 
     @staticmethod
     def document_from_task_request(request):
-        """Translate one ExecuteShowroomTask goal into a command document.
+        """
+        Translate one ExecuteShowroomTask goal into a command document.
 
         The action is a typed front end for the same validated command path
         used by the JSON topics. It carries only high-level intents and
@@ -758,7 +759,8 @@ class ShowroomTaskManager(Node):
         return effect, unit
 
     def execute_rendezvous(self, target, dwell_sec=None, timeout_sec=None):
-        """Send the guide and the coffee robot to meet at one venue.
+        """
+        Send the guide and the coffee robot to meet at one venue.
 
         The guide takes a bounded temporary visit so its itinerary resumes
         afterwards; the coffee robot runs a service visit to the same venue.

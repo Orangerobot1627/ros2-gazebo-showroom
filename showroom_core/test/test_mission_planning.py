@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
-"""Route-planning regression: task-manager requests -> gateway plans.
+"""
+Route-planning regression: task-manager requests -> gateway plans.
 
 Runs the real task manager to build the navigation requests it would publish,
 then feeds those through the semantic gateway planners and asserts the concrete
 targets, waypoints and mission phases. No simulator is required.
 """
 
+import os
 from pathlib import Path
 import sys
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]          # showroom_core
 WORKSPACE = ROOT.parent                              # showroom_gz
 sys.path.insert(0, str(ROOT / 'scripts'))
 sys.path.insert(0, str(WORKSPACE / 'showroom_navigation' / 'scripts'))
+# Keep ROS logs writable even when $HOME is read-only (e.g. sandboxed CI).
+os.environ.setdefault('ROS_LOG_DIR', tempfile.mkdtemp(prefix='showroom_ros_log_'))
 
-import rclpy  # noqa: E402
 from ament_index_python.packages import (  # noqa: E402
     get_package_share_directory)
+import rclpy  # noqa: E402
 from showroom_navigation import (  # noqa: E402
     build_delivery_plan,
     build_guide_plan,

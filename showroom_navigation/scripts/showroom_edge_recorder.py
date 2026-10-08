@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Learn per-edge traversal times from the semantic route event stream.
+"""
+Learn per-edge traversal times from the semantic route event stream.
 
 Subscribes to ``/showroom/robot_events``, measures the simulated time between
 consecutive ``waypoint_reached`` events per robot, folds it into an

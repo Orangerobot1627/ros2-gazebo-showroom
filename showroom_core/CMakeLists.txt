@@ -10,6 +10,7 @@ install(
 
 install(
   PROGRAMS
+    scripts/showroom_acceptance.py
     scripts/showroom_monitor.py
     scripts/showroom_panel.py
     scripts/showroom_speed_profile.py

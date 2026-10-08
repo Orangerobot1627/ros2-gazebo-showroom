@@ -8,5 +8,8 @@ build/
 install/
 log/
 
+# Acceptance run reports and launch logs
+logs/
+
 # Agent/session scratch files
 :memory:.ses

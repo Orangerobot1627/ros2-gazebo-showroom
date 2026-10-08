@@ -109,7 +109,8 @@ def normalize_angle(angle):
 
 
 class WeightedCostModel:
-    """Weighted edge cost with distance, penalty, connector and turn terms.
+    """
+    Weighted edge cost with distance, penalty, connector and turn terms.
 
     This is a compact, dependency-free analogue of the Nav2 Route Server edge
     scorers: distance stands in for the distance/speed scorer, ``penalty``
@@ -182,7 +183,6 @@ class GraphRoutePlanner:
         self.standby = str(service.get('standby', '')).strip()
         self.pickup = str(service.get('pickup', '')).strip()
 
-        profile_name = 'shortest'
         self.cost_models = self._build_cost_models(
             graph_document, cost_model,
             time_lookup=(edge_times.time_for

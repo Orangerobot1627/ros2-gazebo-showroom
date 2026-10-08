@@ -14,9 +14,9 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from showroom_voice_core import (
     DuplicateSuppressor,
+    meaningful_transcript,
     UtteranceSegmenter,
     WakeWordGate,
-    meaningful_transcript,
     write_pcm_wav,
 )
 from std_msgs.msg import Bool, String
@@ -281,7 +281,7 @@ class ShowroomASR(Node):
                         'LISTENING', '忽略噪声或无意义语音', transcript=text,
                         no_speech_prob=round(no_speech_prob, 3))
                     continue
-                accepted, text, reason = self.wake_gate.filter(
+                accepted, text, reason = self.wake_gate.accept(
                     text, time.monotonic())
                 if not accepted:
                     self.publish_status(

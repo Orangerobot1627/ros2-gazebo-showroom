@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Smooth accelerate/decelerate shaping for showroom velocity commands.
+"""
+Smooth accelerate/decelerate shaping for showroom velocity commands.
 
 The profiler sits between the Nav2 velocity smoother and the collision monitor.
 It rate-limits the command up (acceleration) and down (deceleration), clamps it

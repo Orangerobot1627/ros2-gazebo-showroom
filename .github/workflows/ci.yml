@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    container:
+      image: ros:jazzy-ros-base
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: ws/src/showroom_gz
+
+      - name: Install ROS dependencies
+        shell: bash
+        run: |
+          set -e
+          apt-get update
+          rosdep update
+          rosdep install \
+            --from-paths ws/src \
+            --ignore-src \
+            --rosdistro jazzy \
+            -y
+
+      - name: Build (colcon)
+        shell: bash
+        run: |
+          set -e
+          source /opt/ros/jazzy/setup.bash
+          cd ws
+          colcon build --symlink-install \
+            --packages-select \
+              showroom_interfaces \
+              showroom_description \
+              showroom_gz_sim \
+              showroom_navigation \
+              showroom_core \
+              showroom_interaction \
+              showroom_bringup
+
+      - name: Test (functional + lint)
+        shell: bash
+        run: |
+          set -e
+          source /opt/ros/jazzy/setup.bash
+          source ws/install/setup.bash
+          export ROS_LOG_DIR="$(mktemp -d)"
+          cd ws
+          colcon test --packages-select \
+            showroom_bringup showroom_core showroom_description \
+            showroom_gz_sim showroom_interaction showroom_interfaces \
+            showroom_navigation
+          colcon test-result --verbose
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colcon-test-results
+          path: ws/build/**/test_results/**
+          if-no-files-found: ignore
