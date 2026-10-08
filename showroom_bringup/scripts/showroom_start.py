@@ -8,7 +8,7 @@ import sys
 
 PROFILES = {
     'manual': 'Gazebo 显示双机器人，启用本地语音命令',
-    'demo': 'Gazebo 显示双机器人并自动开始完整导览',
+    'demo': 'Gazebo 显示双机器人，自动开始完整导览并支持语音命令',
     'headless': '双机器人无界面运行',
     'mock': '无界面启动并启用 Mock LLM',
     'llm': '打开 RViz 并启用 Ollama',

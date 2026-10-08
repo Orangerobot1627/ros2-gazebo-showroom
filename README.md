@@ -94,7 +94,7 @@ Available profiles:
 | Profile | Starts |
 | --- | --- |
 | `manual` | Gazebo with both robots and local voice commands; waits for “开始” (default) |
-| `demo` | Gazebo with the full two-robot guide scenario started automatically |
+| `demo` | Gazebo with the full two-robot guide scenario started automatically, local voice commands enabled |
 | `headless` | Both robots without Gazebo or RViz windows |
 | `mock` | Headless system with the deterministic Mock LLM |
 | `llm` | Both robots, RViz and Ollama text interaction |

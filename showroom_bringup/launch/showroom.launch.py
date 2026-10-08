@@ -33,8 +33,11 @@ PROFILE_CONFIGS = {
             'headless': 'false',
             'rviz': 'false',
             'business_auto_start': 'true',
+            'enable_llm': 'true',
+            'llm_backend': 'mock',
+            'enable_voice': 'true',
         },
-        'description': 'automatic two-robot demonstration in Gazebo',
+        'description': 'automatic two-robot demonstration with local voice',
     },
     'headless': {
         'launch': 'dual_robot.launch.py',
