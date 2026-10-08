@@ -25,7 +25,7 @@ PROFILE_CONFIGS = {
             'llm_backend': 'mock',
             'enable_voice': 'true',
         },
-        'description': 'Gazebo operator view with local voice commands',
+        'description': 'main mode: voice control plus the default route',
     },
     'demo': {
         'launch': 'dual_robot.launch.py',

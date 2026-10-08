@@ -7,7 +7,7 @@ import sys
 
 
 PROFILES = {
-    'manual': 'Gazebo 显示双机器人，启用本地语音命令',
+    'manual': '主模式：语音控制 + 默认路线（说“开始”后自动导览，可随时下指令）',
     'demo': 'Gazebo 显示双机器人，自动开始完整导览并支持语音命令',
     'headless': '双机器人无界面运行',
     'mock': '无界面启动并启用 Mock LLM',

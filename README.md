@@ -78,12 +78,14 @@ cd /home/xxl/ros2_ws/src/showroom_gz
 ./start_showroom.sh demo
 ```
 
-The first command opens Gazebo at the entrance, where both robot models are
-visible, and enables local voice commands. Say `开始` or `开始导览` after the
-terminal reports `ASR LISTENING: Whisper 已就绪`. The route then starts in
-Gazebo; RViz is only used by the `navigation` debugging profile. Select a
-ready-made startup profile by adding one short name. The equivalent installed
-command is:
+The default command (`manual`) is the main mode: it opens Gazebo at the entrance,
+where both robot models are visible, and enables local voice commands. Say
+`开始` or `开始导览` after the terminal reports `ASR LISTENING: Whisper 已就绪`;
+the full default tour then runs in Gazebo. While it runs you can keep talking —
+skip or go straight to a hall, stay longer, ask for a drink — and each command
+takes over as a higher-priority task and the default itinerary resumes when it
+ends. With no further commands the run is exactly the automatic demonstration.
+RViz is only used by the debugging profiles. The equivalent installed command is:
 
 ```bash
 ros2 run showroom_bringup showroom demo
@@ -93,7 +95,7 @@ Available profiles:
 
 | Profile | Starts |
 | --- | --- |
-| `manual` | Gazebo with both robots and local voice commands; waits for “开始” (default) |
+| `manual` | **Main mode**: voice control plus the default route; waits for “开始”, then runs the full tour and accepts commands (default) |
 | `demo` | Gazebo with the full two-robot guide scenario started automatically, local voice commands enabled |
 | `headless` | Both robots without Gazebo or RViz windows |
 | `mock` | Headless system with the deterministic Mock LLM |
