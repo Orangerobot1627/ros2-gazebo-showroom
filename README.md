@@ -349,3 +349,55 @@ ros2 topic pub --once \
   /showroom/navigation_requests std_msgs/msg/String \
   "{data: '{\"request_type\":\"delivery\",\"robot_id\":\"robot_1\",\"mission_id\":\"manual-coffee-1\",\"service_target\":\"robotics_hall\",\"beverage\":\"coffee\"}'}"
 ```
+
+## Acceptance and continuous integration
+
+Three repository-level entry points make the demo reproducible:
+
+```bash
+./run_tests.sh            # every functional test script
+./run_tests.sh --lint     # plus the ament flake8 / pep257 / copyright checks
+./run_tests.sh --build    # colcon build first, then test
+
+./run_acceptance.sh                      # one guided run for robot_0
+./run_acceptance.sh --runs 10            # ten runs + success-rate summary
+./run_acceptance.sh --robot robot_1 \
+  --command '{"intent":"deliver_drink","drink":"coffee","target":"lounge"}'
+
+./run_voice_acceptance.sh                    # Mock (fully offline)
+./run_voice_acceptance.sh --backend qwen     # local Ollama / Qwen
+./run_voice_acceptance.sh --backend offline  # Ollama unreachable
+```
+
+`run_acceptance.sh` records each run with
+`showroom_core/showroom_acceptance.py` and writes a JSON report under
+`logs/acceptance/` with the metrics the acceptance checklist asks for:
+waypoints reached, failed targets, Nav2 recoveries, safety interventions,
+duration, minimum lidar clearance, and whether `route_completed` was seen.
+The recorder exits 0 only on a completed route, so a loop can measure the
+success rate directly.
+
+`run_voice_acceptance.sh` drives a fixed command set through
+`/showroom/user_text` and records the recognised intent, the whitelist
+dispatch decision, the task acknowledgement, and the first-response latency
+for Mock, Qwen, and the Ollama-unavailable path.
+
+`.github/workflows/ci.yml` builds the seven packages on `ros:jazzy-ros-base`
+and runs the same functional and lint tests on every push and pull request.
+
+### Delivery roadmap
+
+1. **Repeatable acceptance baseline** — lint is clean, CI is in place, the
+   unified test and acceptance commands are added; the blue-route soak is being
+   measured.
+2. **Coffee delivery and dual-robot acceptance** — a coffee delivery to
+   `technology_history` completes end to end and returns to standby; per-target
+   and concurrent runs still need soaking.
+3. **Safety-stop strategy** — planned: a two-layer slowdown/stop polygon so the
+   collision monitor can be enabled by default.
+4. **Voice and Qwen acceptance** — validated for Mock, Qwen, and the
+   Ollama-unavailable error path.
+5. **Runtime environment management** — planned: ROS domain allocation, PID
+   files, and scoped cleanup instead of a broad `pkill`.
+6. **Visual fidelity / pedestrians** — later.
+7. **Real-robot migration** — later.
