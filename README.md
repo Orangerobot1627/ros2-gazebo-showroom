@@ -171,9 +171,20 @@ ros2 service call /showroom/reset_robot_pose \
 ```
 
 The reset proxy rejects unknown robot IDs, non-finite coordinates, and poses
-outside the showroom bounds. Disable it with `enable_pose_reset:=false`. The
-`ExecuteShowroomTask` action definition is generated for the next control-plane
-migration step.
+outside the showroom bounds. Disable it with `enable_pose_reset:=false`.
+
+The task manager exposes the typed `ExecuteShowroomTask` action on
+`/showroom/execute_task`. It is a typed front end for the same validated command
+path as `/showroom/command`: it carries a high-level intent (or a validated JSON
+plan), never velocities or coordinates, streams `state`, `current_task`,
+`progress`, and `detail` feedback while a mission runs, and returns `accepted`,
+`detail`, and `final_state`. The JSON topics stay available for compatibility:
+
+```bash
+ros2 action send_goal /showroom/execute_task \
+  showroom_interfaces/action/ExecuteShowroomTask \
+  "{intent: 'start_tour', coffee: true}" --feedback
+```
 
 The launch defaults to `LIBGL_ALWAYS_SOFTWARE=1` for VMware. Use
 `headless:=true` for automated checks. Add `rviz:=true` to open the map,

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """ROS 2 task manager for the showroom guide and coffee service."""
 
+import asyncio
 import json
 from pathlib import Path
 import time
 
 from ament_index_python.packages import get_package_share_directory
 import rclpy
+from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.duration import Duration
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -28,6 +30,7 @@ from showroom_task_units import (
     TaskUnitError,
     TaskUnitTracker,
 )
+from showroom_interfaces.action import ExecuteShowroomTask
 from std_msgs.msg import String
 
 
@@ -55,6 +58,7 @@ class ShowroomTaskManager(Node):
         self.declare_parameter('routes_file', '')
         self.declare_parameter('override_timeout_sec', 0.0)
         self.declare_parameter('navigation_backend', 'nav2')
+        self.declare_parameter('task_action_name', '/showroom/execute_task')
 
         policy_file = str(self.get_parameter('action_policy_file').value)
         if policy_file:
@@ -95,6 +99,12 @@ class ShowroomTaskManager(Node):
             'robot_0': 'entrance',
             'robot_1': 'coffee_robot_standby',
         }
+        self.active_task_goal = None
+        self.active_task_mission_ids = set()
+        self.active_task_plan = False
+        self.active_task_done = False
+        self.active_task_success = False
+        self.active_task_detail = ''
         route_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.RELIABLE,
@@ -151,6 +161,14 @@ class ShowroomTaskManager(Node):
         )
         self.create_timer(1.0, self.publish_periodic_status)
         self.create_timer(0.2, self.expire_overrides)
+        self.task_action_server = ActionServer(
+            self,
+            ExecuteShowroomTask,
+            self.get_parameter('task_action_name').value,
+            execute_callback=self.execute_showroom_task,
+            goal_callback=self.accept_showroom_task,
+            cancel_callback=self.cancel_showroom_task,
+        )
 
         self.auto_start_timer = None
         if self.get_parameter('auto_start').value:
@@ -179,6 +197,9 @@ class ShowroomTaskManager(Node):
 
     def apply_effects(self, effects):
         for effect in effects:
+            mission_id = effect.get('mission_id')
+            if mission_id and self.active_task_goal is not None:
+                self.active_task_mission_ids.add(mission_id)
             if effect.get('type') == 'route_command':
                 if (self.navigation_backend == 'nav2'
                         and effect.get('robot_id') == 'robot_0'
@@ -239,6 +260,7 @@ class ShowroomTaskManager(Node):
 
     def publish_periodic_status(self):
         self.publish_status('periodic')
+        self.publish_active_task_feedback()
 
     def publish_response(self, accepted, intent, detail):
         self.publish_json(self.response_publisher, {
@@ -247,6 +269,202 @@ class ShowroomTaskManager(Node):
             'intent': intent,
             'detail': detail,
         })
+
+    # --- Typed ExecuteShowroomTask control plane -------------------------
+
+    @staticmethod
+    def document_from_task_request(request):
+        """Translate one ExecuteShowroomTask goal into a command document.
+
+        The action is a typed front end for the same validated command path
+        used by the JSON topics. It carries only high-level intents and
+        semantic targets, never velocities or coordinates.
+        """
+        document = {}
+        plan_json = (request.plan_json or '').strip()
+        intent = (request.intent or '').strip()
+        action = (request.action or '').strip()
+        if plan_json:
+            document['plan'] = json.loads(plan_json)
+            document['intent'] = 'execute_plan'
+            request_id = (request.request_id or '').strip()
+            if request_id:
+                document['plan_id'] = request_id
+        elif intent:
+            document['intent'] = intent
+        elif action:
+            document['intent'] = 'robot_action'
+        if action and document.get('intent') != 'execute_plan':
+            document['action'] = action
+        robot = (request.robot or '').strip()
+        if robot:
+            document['robot'] = robot
+        target = (request.target or '').strip()
+        if target:
+            document['target'] = target
+        drink = (request.drink or '').strip()
+        if drink:
+            document['drink'] = drink
+        if request.tasks:
+            document['tasks'] = list(request.tasks)
+        if request.duration_sec > 0.0:
+            document['duration_sec'] = float(request.duration_sec)
+        if request.dwell_sec > 0.0:
+            document['dwell_sec'] = float(request.dwell_sec)
+        if request.timeout_sec > 0.0:
+            document['timeout_sec'] = float(request.timeout_sec)
+        if request.coffee:
+            document['coffee'] = True
+        return document
+
+    def task_state_text(self):
+        """Summarize the business state for typed action feedback."""
+        if self.active_task_plan:
+            return self.plan_executor.state
+        return f'{self.logic.guide_state}/{self.logic.coffee_state}'
+
+    def task_progress(self):
+        """Return (current_task, progress_fraction) for action feedback."""
+        if self.active_task_plan:
+            plan = self.plan_executor.snapshot()
+            total = plan.get('step_total') or 0
+            step = plan.get('current_step')
+            progress = (step / total) if total and step is not None else 0.0
+            return str(plan.get('plan_id', '')), progress
+        snapshot = self.task_units.snapshot()
+        if snapshot is None:
+            return '', 0.0
+        total = max(1, snapshot['total'])
+        return snapshot['display_name'], snapshot['ordinal'] / total
+
+    def publish_active_task_feedback(self):
+        """Stream progress on the in-flight typed action, if any."""
+        goal = self.active_task_goal
+        if goal is None or self.active_task_done:
+            return
+        current_task, progress = self.task_progress()
+        feedback = ExecuteShowroomTask.Feedback()
+        feedback.state = self.task_state_text()
+        feedback.current_task = current_task
+        feedback.progress = float(progress)
+        feedback.detail = self.active_task_detail
+        goal.publish_feedback(feedback)
+
+    def accept_showroom_task(self, goal_request):
+        """Validate the goal shape before accepting it for execution."""
+        try:
+            document = self.document_from_task_request(goal_request)
+        except (json.JSONDecodeError, TypeError, ValueError) as exception:
+            self.get_logger().warning(
+                f'Rejecting ExecuteShowroomTask goal: {exception}')
+            return GoalResponse.REJECT
+        if not document.get('intent'):
+            self.get_logger().warning(
+                'Rejecting ExecuteShowroomTask goal: no intent or plan')
+            return GoalResponse.REJECT
+        return GoalResponse.ACCEPT
+
+    def cancel_showroom_task(self, goal_handle):
+        """Allow a client to stop tracking a task without touching the route."""
+        return CancelResponse.ACCEPT
+
+    def finish_active_task(self, detail):
+        """Abort an in-flight action goal that has been superseded."""
+        goal = self.active_task_goal
+        if goal is not None and getattr(goal, 'is_active', False):
+            goal.abort()
+        self.active_task_goal = None
+
+    def is_task_resolved(self, goal_handle):
+        """Return True once the active task reached a terminal state."""
+        if getattr(goal_handle, 'is_cancel_requested', False):
+            self.active_task_detail = 'cancelled by client'
+            return True
+        if not getattr(goal_handle, 'is_active', True):
+            return True
+        if self.active_task_done:
+            return True
+        if self.active_task_plan and self.plan_executor.state in (
+                'SUCCEEDED', 'FAILED', 'CANCELLED'):
+            self.active_task_done = True
+            self.active_task_success = (
+                self.plan_executor.state == 'SUCCEEDED')
+            if not self.active_task_success:
+                self.active_task_detail = (
+                    f'plan {self.plan_executor.state}: '
+                    f'{self.plan_executor.error}')
+            return True
+        return False
+
+    def observe_active_task_event(self, document):
+        """Resolve the active action goal from a route lifecycle event."""
+        if self.active_task_goal is None or self.active_task_done:
+            return
+        mission_id = document.get('mission_id')
+        if mission_id not in self.active_task_mission_ids:
+            return
+        event_type = document.get('type')
+        if event_type == 'route_completed':
+            self.active_task_done = True
+            self.active_task_success = True
+            self.active_task_detail = f'mission {mission_id} completed'
+        elif event_type in ('route_failed', 'route_cancelled',
+                            'route_command_rejected'):
+            self.active_task_done = True
+            self.active_task_success = False
+            reason = document.get('reason', event_type)
+            self.active_task_detail = f'mission {mission_id}: {reason}'
+
+    async def execute_showroom_task(self, goal_handle):
+        """Execute one validated high-level showroom task as a typed action."""
+        request = goal_handle.request
+        document = self.document_from_task_request(request)
+        source = f'action:{request.request_id or "task"}'
+        if self.active_task_goal is not None:
+            self.finish_active_task('superseded by a newer task')
+        self.active_task_goal = goal_handle
+        self.active_task_mission_ids = set()
+        self.active_task_plan = document.get('intent') == 'execute_plan'
+        self.active_task_done = False
+        self.active_task_success = False
+        self.active_task_detail = 'task accepted'
+        self.publish_active_task_feedback()
+        result = ExecuteShowroomTask.Result()
+        try:
+            detail = self.execute_command(document, source)
+        except (ActionPolicyError, PlanError, TaskUnitError,
+                json.JSONDecodeError, TypeError, ValueError) as exception:
+            self.get_logger().warning(
+                f'ExecuteShowroomTask rejected: {exception}')
+            self.publish_response(False, document.get('intent'), str(exception))
+            self.active_task_goal = None
+            self.active_task_done = True
+            result.accepted = False
+            result.detail = str(exception)
+            result.final_state = self.task_state_text()
+            goal_handle.abort()
+            return result
+        self.active_task_detail = detail
+        immediate = (
+            not self.active_task_mission_ids and not self.active_task_plan)
+        while not immediate and not self.is_task_resolved(goal_handle):
+            self.publish_active_task_feedback()
+            await asyncio.sleep(0.5)
+        cancelled = getattr(goal_handle, 'is_cancel_requested', False)
+        accepted = bool(self.active_task_success) and not cancelled
+        result.accepted = accepted
+        result.detail = self.active_task_detail
+        result.final_state = self.task_state_text()
+        self.active_task_goal = None
+        self.active_task_done = True
+        if getattr(goal_handle, 'is_active', True):
+            if cancelled:
+                goal_handle.canceled()
+            elif accepted:
+                goal_handle.succeed()
+            else:
+                goal_handle.abort()
+        return result
 
     @staticmethod
     def parse_message(message):
@@ -805,6 +1023,7 @@ class ShowroomTaskManager(Node):
         self.apply_effects(effects)
         self.publish_status(f'{source}:{intent}')
         self.publish_response(True, intent, detail)
+        return detail
 
     def expire_overrides(self):
         """Resume defaults after a wall-clock human-control lease expires."""
@@ -855,6 +1074,7 @@ class ShowroomTaskManager(Node):
             robot_id = document.get('robot_id')
             if robot_id in self.robot_locations and document.get('label'):
                 self.robot_locations[robot_id] = document['label']
+            self.observe_active_task_event(document)
             if event_type in ('route_cancelled', 'route_completed'):
                 self.override_leases.release(robot_id)
             is_temporary = (

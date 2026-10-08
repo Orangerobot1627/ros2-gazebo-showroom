@@ -38,6 +38,7 @@ if(BUILD_TESTING)
       business_logic
       monitor_logic
       plan
+      task_action
       task_units)
     ament_add_test(
       showroom_core_${test_name}
