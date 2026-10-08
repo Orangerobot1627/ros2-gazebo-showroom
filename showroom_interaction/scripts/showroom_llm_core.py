@@ -183,7 +183,9 @@ class MockBackend:
                     },
                 ],
             }
-        elif any(word in user_text for word in ('状态', '到哪', '为什么停')):
+        elif any(word in user_text for word in (
+                '状态', '到哪', '为什么停', '在哪', '了吗', '到了吗',
+                '到了没', '走到哪', '多远', '进度', '还有多久')):
             result = {'intent': 'ask_status'}
         elif any(word in user_text for word in (
                 '详细讲', '深入讲', '展开讲', '为什么它')):

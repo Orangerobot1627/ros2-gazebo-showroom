@@ -36,7 +36,7 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 
-  foreach(test_name llm_bridge_logic voice_core interaction_launch)
+  foreach(test_name llm_bridge_logic voice_core interaction_launch intent_scenarios)
     ament_add_test(
       showroom_interaction_${test_name}
       COMMAND ${Python3_EXECUTABLE}
