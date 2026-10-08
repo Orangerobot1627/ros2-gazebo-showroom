@@ -278,6 +278,17 @@ def main():
     assert command_from_result(infer('带我去隧道待30秒')) == {
         'intent': 'temporary_visit', 'target': 'time_tunnel',
         'dwell_sec': 30.0, 'timeout_sec': 300.0}
+    # Fuzzy fallback catches substitution typos without cross-family hits.
+    assert command_from_result(infer('机气人馆送杯水')) == {
+        'intent': 'deliver_drink', 'drink': 'water',
+        'target': 'robotics_hall'}
+    assert command_from_result(infer('视觉关送咖啡')) == {
+        'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'vision_hall'}
+    assert command_from_result(infer('时空遂道送杯咖啡')) == {
+        'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'time_tunnel'}
+    # A plain "开始导览" must not be mistaken for a robot nickname.
+    assert command_from_result(infer('开始导览')) == {
+        'intent': 'start_tour', 'coffee': True}
 
     compact = compact_context(
         {'guide_state': 'TOURING', 'private': 'drop-me'},

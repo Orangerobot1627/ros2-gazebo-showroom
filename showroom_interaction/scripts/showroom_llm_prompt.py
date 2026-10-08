@@ -5,6 +5,13 @@ import json
 import re
 
 
+# Fuzzy fallback catches substitution typos and ASR slips ("视觉关" ~ "视觉馆")
+# while the alias list stays small. A window of the alias length slides over the
+# text; only position-wise near-matches count, so a shift like "始导览" does not
+# spuriously match "导览车".
+FUZZY_RATIO = 0.66
+
+
 PLACE_ALIASES = (
     (('计算机视觉馆', '计算机视觉展厅', '视觉馆', '视觉展厅', '视觉区',
       '图像馆', '视觉识别区'),
@@ -45,12 +52,50 @@ ORDINAL_DIGITS = {
 }
 
 
-def robot_ids_in_text(text):
-    """Return canonical robot targets mentioned in the sentence."""
+def _exact_present(text, aliases):
+    return any(alias in text for alias in aliases)
+
+
+def _fuzzy_present(text, aliases):
+    """True when a position-wise near-match of any alias appears."""
+    for alias in aliases:
+        size = len(alias)
+        if size < 2 or len(text) < size:
+            continue
+        for start in range(len(text) - size + 1):
+            window = text[start:start + size]
+            matches = sum(
+                1 for a, b in zip(window, alias) if a == b)
+            if matches / size >= FUZZY_RATIO:
+                return True
+    return False
+
+
+def _exact_task_ids(text):
+    return [
+        task_id for aliases, task_id in PLACE_ALIASES
+        if _exact_present(text, aliases)
+    ]
+
+
+def _exact_robot_ids(text):
     return [
         robot for aliases, robot in ROBOT_ALIASES
-        if any(alias in text for alias in aliases)
+        if _exact_present(text, aliases)
     ]
+
+
+def robot_ids_in_text(text):
+    """Return canonical robot targets mentioned in the sentence."""
+    ids = _exact_robot_ids(text)
+    if not ids and not _exact_task_ids(text):
+        # Only fall back to fuzzy matching when nothing was recognized at all,
+        # so a shared token like 机器人 cannot misfire between families.
+        ids = [
+            robot for aliases, robot in ROBOT_ALIASES
+            if _fuzzy_present(text, aliases)
+        ]
+    return ids
 
 
 def ordinal_task_id(text):
@@ -70,10 +115,12 @@ def ordinal_task_id(text):
 
 def task_ids_in_text(text):
     """Extract semantic task ids in configured showroom order."""
-    ids = [
-        task_id for aliases, task_id in PLACE_ALIASES
-        if any(alias in text for alias in aliases)
-    ]
+    ids = _exact_task_ids(text)
+    if not ids and not _exact_robot_ids(text):
+        ids = [
+            task_id for aliases, task_id in PLACE_ALIASES
+            if _fuzzy_present(text, aliases)
+        ]
     ordinal = ordinal_task_id(text)
     if ordinal and ordinal not in ids:
         ids.append(ordinal)
