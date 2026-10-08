@@ -6,26 +6,78 @@ import re
 
 
 PLACE_ALIASES = (
-    (('计算机视觉馆', '计算机视觉展厅', '视觉馆', '视觉展厅', '视觉区'),
+    (('计算机视觉馆', '计算机视觉展厅', '视觉馆', '视觉展厅', '视觉区',
+      '图像馆', '视觉识别区'),
      'vision_hall'),
-    (('智能机器人馆', '智能机器人展厅', '机器人馆', '机器人展厅', '机器人区'),
+    (('智能机器人馆', '智能机器人展厅', '机器人馆', '机器人展厅', '机器人区',
+      '机械臂馆', '机器臂馆', '机器臂场馆', '机械臂展厅', '机器人场馆'),
      'robotics_hall'),
-    (('科技发展历史展区', '科技历史馆', '历史馆', '历史展区', '科技发展史'),
+    (('科技发展历史展区', '科技历史馆', '历史馆', '历史展区', '科技发展史',
+      '发展历史馆', '科技史'),
      'technology_history'),
-    (('时空科技隧道', '时空隧道', '科技隧道', '隧道'), 'time_tunnel'),
-    (('科技舞蹈展厅', '科技舞蹈馆', '舞蹈馆', '舞蹈展厅', '数字艺术馆'),
+    (('时空科技隧道', '时空隧道', '科技隧道', '时光隧道', '隧道'), 'time_tunnel'),
+    (('科技舞蹈展厅', '科技舞蹈馆', '舞蹈馆', '舞蹈展厅', '数字艺术馆', '舞厅'),
      'dance_hall'),
-    (('智能休息服务区', '咖啡休息区', '休息区', '休息室', '服务区'), 'lounge'),
-    (('入馆接待', '接待区', '入馆区', '入口', '门口'), 'reception'),
+    (('智能休息服务区', '咖啡休息区', '休息区', '休息室', '服务区', '休闲区'),
+     'lounge'),
+    (('入馆接待', '接待区', '入馆区', '入口', '门口', '前台'), 'reception'),
 )
+
+# Robot nicknames a visitor may use; all map to the contract robot targets.
+ROBOT_ALIASES = (
+    (('导览机器人', '蓝色机器人', '导游机器人', '讲解机器人', '导览车'),
+     'guide'),
+    (('服务机器人', '送餐机器人', '咖啡机器人', '配送机器人', '绿色机器人',
+      '送咖啡机器人', '送饮料机器人'),
+     'coffee'),
+    (('两台机器人', '两个机器人', '所有机器人', '全部机器人', '机器人们'),
+     'all'),
+)
+
+# Ordinals count the five exhibit halls, excluding reception and lounge.
+EXHIBIT_ORDER = (
+    'technology_history', 'vision_hall', 'robotics_hall',
+    'time_tunnel', 'dance_hall',
+)
+ORDINAL_DIGITS = {
+    '一': 1, '1': 1, '二': 2, '两': 2, '2': 2, '三': 3, '3': 3,
+    '四': 4, '4': 4, '五': 5, '5': 5,
+}
+
+
+def robot_ids_in_text(text):
+    """Return canonical robot targets mentioned in the sentence."""
+    return [
+        robot for aliases, robot in ROBOT_ALIASES
+        if any(alias in text for alias in aliases)
+    ]
+
+
+def ordinal_task_id(text):
+    """Resolve '第一个场馆' style ordinals over the five exhibit halls."""
+    if '最后' in text:
+        return 'lounge'
+    match = re.search(
+        r'第\s*([一二两三四五12345])\s*(?:个|号)?\s*'
+        r'(?:场馆|展馆|展区|展厅|区|任务|站)?', text)
+    if not match:
+        return None
+    index = ORDINAL_DIGITS.get(match.group(1))
+    if index and 1 <= index <= len(EXHIBIT_ORDER):
+        return EXHIBIT_ORDER[index - 1]
+    return None
 
 
 def task_ids_in_text(text):
     """Extract semantic task ids in configured showroom order."""
-    return [
+    ids = [
         task_id for aliases, task_id in PLACE_ALIASES
         if any(alias in text for alias in aliases)
     ]
+    ordinal = ordinal_task_id(text)
+    if ordinal and ordinal not in ids:
+        ids.append(ordinal)
+    return ids
 
 
 def normalize_semantic_result(document, user_text):
@@ -34,7 +86,27 @@ def normalize_semantic_result(document, user_text):
         return document
     text = str(user_text)
     tasks = task_ids_in_text(text)
+    robots = robot_ids_in_text(text)
     reply = document.get('reply', '')
+    intent = document.get('intent')
+    # Repair robot targeting from nicknames: "送餐机器人暂停" must pause the
+    # coffee robot, not fall back to the guide robot.
+    if robots:
+        if intent in ('pause_tour', 'resume_tour') and robots[0] in (
+                'coffee', 'all'):
+            repaired = {
+                'intent': 'robot_action',
+                'robot': robots[0],
+                'action': 'pause' if intent == 'pause_tour' else 'resume',
+                'reply': reply,
+            }
+            if 'duration_sec' in document:
+                repaired['duration_sec'] = document['duration_sec']
+            return repaired
+        if intent == 'robot_action':
+            repaired = dict(document)
+            repaired['robot'] = robots[0]
+            return repaired
     selection_request = any(
         word in text for word in ('只看', '只参观', '只去', '只逛'))
     skip_request = any(word in text for word in (
@@ -65,10 +137,9 @@ def normalize_semantic_result(document, user_text):
     if tasks and skip_request:
         return {'intent': 'skip_task', 'tasks': tasks, 'reply': reply}
     if any(word in text for word in ('绕过障碍', '绕开障碍', '绕过去', '避开障碍')):
-        robot = 'coffee' if any(word in text for word in (
-            '绿色', '咖啡机器人', '服务机器人')) else 'guide'
         return {
-            'intent': 'robot_action', 'robot': robot,
+            'intent': 'robot_action',
+            'robot': robots[0] if robots else 'guide',
             'action': 'bypass_obstacle', 'reply': reply}
     if tasks and drink_request and delivery_request and not any(
             word in text for word in (

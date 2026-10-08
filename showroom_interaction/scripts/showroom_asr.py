@@ -64,7 +64,7 @@ class ShowroomASR(Node):
         self.declare_parameter('noise_floor_alpha', 0.95)
         self.declare_parameter(
             'wake_words', '开始导览 开始 你好机器人 未来科技展馆')
-        self.declare_parameter('wake_session_sec', 25.0)
+        self.declare_parameter('wake_session_sec', 600.0)
         self.declare_parameter('duplicate_window_sec', 3.0)
         self.declare_parameter('min_transcript_chars', 2)
         self.declare_parameter('max_no_speech_prob', 0.6)

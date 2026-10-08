@@ -150,9 +150,10 @@ class MockBackend:
         duration = (
             float(duration_match.group(1)) if duration_match else None)
         coffee_robot = any(word in user_text for word in (
-            '绿色', '服务机器人', '咖啡机器人'))
+            '绿色', '服务机器人', '咖啡机器人', '送餐机器人', '配送机器人',
+            '送饮料机器人'))
         all_robots = any(word in user_text for word in (
-            '两个机器人', '两台机器人', '所有机器人'))
+            '两个机器人', '两台机器人', '所有机器人', '全部机器人'))
         stay_request = any(word in user_text for word in (
             '多待', '多呆', '停留', '待一会', '呆一会'))
         drink_request = any(word in user_text for word in (

@@ -36,6 +36,15 @@ def infer_with_mock(text):
         extract_json_object(backend.complete(messages)))
 
 
+def infer(text):
+    """Mirror the bridge pipeline: mock, then normalizers, then validation."""
+    backend = MockBackend()
+    document = extract_json_object(backend.complete(build_messages(text)))
+    document = normalize_multi_task_result(document, text)
+    document = normalize_semantic_result(document, text)
+    return validate_model_result(document)
+
+
 def expect_invalid(document):
     try:
         validate_model_result(document)
@@ -251,6 +260,24 @@ def main():
     # A delivery without any venue still resolves to a valid destination.
     assert command_from_result(infer_with_mock('送杯咖啡过来')) == {
         'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'lounge'}
+
+    # Nicknames and ordinals are normalized on the full bridge pipeline.
+    assert command_from_result(infer('送餐机器人暂停20秒')) == {
+        'intent': 'robot_action', 'robot': 'coffee', 'action': 'pause',
+        'duration_sec': 20.0}
+    assert command_from_result(infer('蓝色机器人绕过障碍')) == {
+        'intent': 'robot_action', 'robot': 'guide',
+        'action': 'bypass_obstacle'}
+    assert command_from_result(infer('两台机器人暂停')) == {
+        'intent': 'robot_action', 'robot': 'all', 'action': 'pause'}
+    assert command_from_result(infer('送杯水到第一个场馆')) == {
+        'intent': 'deliver_drink', 'drink': 'water',
+        'target': 'technology_history'}
+    assert command_from_result(infer('机器臂馆送杯咖啡')) == {
+        'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'robotics_hall'}
+    assert command_from_result(infer('带我去隧道待30秒')) == {
+        'intent': 'temporary_visit', 'target': 'time_tunnel',
+        'dwell_sec': 30.0, 'timeout_sec': 300.0}
 
     compact = compact_context(
         {'guide_state': 'TOURING', 'private': 'drop-me'},
