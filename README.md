@@ -142,6 +142,12 @@ Use `llm_backend:=ollama` with `llm_endpoint` and `llm_model` for the local
 model service. Add `enable_voice:=true` after the configured faster-whisper and
 Piper model paths and PipeWire devices are available.
 
+The microphone front end filters noise before dispatch. It requires a wake word
+(`开始`, `开始导览`, `你好机器人`, or `未来科技展馆`) to open a 25 s command
+session, rejects short, hallucinated, or high no-speech transcripts, raises its
+energy threshold above the measured ambient noise floor, and drops a command
+repeated within 6 s. Set `wake_words:=` to empty to forward every utterance.
+
 The two motion pipelines are isolated as
 `cmd_vel_nav -> velocity_smoother -> collision_monitor -> cmd_vel`. Each
 collision monitor consumes its robot's own scan and publishes a namespaced

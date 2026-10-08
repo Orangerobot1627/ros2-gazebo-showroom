@@ -12,7 +12,13 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
-from showroom_voice_core import UtteranceSegmenter, write_pcm_wav
+from showroom_voice_core import (
+    DuplicateSuppressor,
+    UtteranceSegmenter,
+    WakeWordGate,
+    meaningful_transcript,
+    write_pcm_wav,
+)
 from std_msgs.msg import Bool, String
 
 
@@ -53,6 +59,15 @@ class ShowroomASR(Node):
         self.declare_parameter('pre_roll_ms', 450)
         self.declare_parameter('release_threshold_ratio', 0.60)
         self.declare_parameter('queue_capacity', 4)
+        self.declare_parameter('adaptive_noise', True)
+        self.declare_parameter('noise_gain', 3.0)
+        self.declare_parameter('noise_floor_alpha', 0.95)
+        self.declare_parameter(
+            'wake_words', '开始导览 开始 你好机器人 未来科技展馆')
+        self.declare_parameter('wake_session_sec', 25.0)
+        self.declare_parameter('duplicate_window_sec', 6.0)
+        self.declare_parameter('min_transcript_chars', 2)
+        self.declare_parameter('max_no_speech_prob', 0.6)
         self.declare_parameter('user_topic', '/showroom/user_text')
         self.declare_parameter(
             'transcript_topic', '/showroom/voice/transcript')
@@ -89,7 +104,25 @@ class ShowroomASR(Node):
             pre_roll_ms=int(self.get_parameter('pre_roll_ms').value),
             release_threshold_ratio=float(
                 self.get_parameter('release_threshold_ratio').value),
+            adaptive_noise=bool(
+                self.get_parameter('adaptive_noise').value),
+            noise_gain=float(self.get_parameter('noise_gain').value),
+            noise_floor_alpha=float(
+                self.get_parameter('noise_floor_alpha').value),
         )
+        self.wake_gate = WakeWordGate(
+            wake_words=str(
+                self.get_parameter('wake_words').value).split(),
+            session_sec=float(
+                self.get_parameter('wake_session_sec').value),
+        )
+        self.duplicate_suppressor = DuplicateSuppressor(
+            window_sec=float(
+                self.get_parameter('duplicate_window_sec').value))
+        self.min_transcript_chars = int(
+            self.get_parameter('min_transcript_chars').value)
+        self.max_no_speech_prob = float(
+            self.get_parameter('max_no_speech_prob').value)
         self.utterances = queue.Queue(maxsize=int(
             self.get_parameter('queue_capacity').value))
         self.stopping = threading.Event()
@@ -234,19 +267,42 @@ class ShowroomASR(Node):
                     # Chinese syllables at the start or end of the command.
                     vad_filter=False,
                 )
-                text = ''.join(segment.text for segment in segments).strip()
-                if text:
-                    transcript = String()
-                    transcript.data = text
-                    self.transcript_publisher.publish(transcript)
-                    self.user_publisher.publish(transcript)
-                    self.get_logger().info(f'ASR: {text}')
+                segment_list = list(segments)
+                text = ''.join(
+                    segment.text for segment in segment_list).strip()
+                no_speech_prob = max(
+                    (getattr(segment, 'no_speech_prob', 0.0)
+                     for segment in segment_list), default=0.0)
+                if not meaningful_transcript(
+                        text, no_speech_prob=no_speech_prob,
+                        min_chars=self.min_transcript_chars,
+                        max_no_speech=self.max_no_speech_prob):
                     self.publish_status(
-                        'LISTENING', '识别完成', transcript=text,
-                        latency_sec=round(time.monotonic() - started, 3),
-                    )
-                else:
-                    self.publish_status('LISTENING', '未识别到有效文字')
+                        'LISTENING', '忽略噪声或无意义语音', transcript=text,
+                        no_speech_prob=round(no_speech_prob, 3))
+                    continue
+                accepted, text, reason = self.wake_gate.filter(
+                    text, time.monotonic())
+                if not accepted:
+                    self.publish_status(
+                        'WAKE_REQUIRED',
+                        '未检测到唤醒词，请先说“开始”', transcript=text)
+                    continue
+                if not self.duplicate_suppressor.accept(
+                        text, time.monotonic()):
+                    self.publish_status(
+                        'LISTENING', '忽略重复指令', transcript=text)
+                    continue
+                transcript = String()
+                transcript.data = text
+                self.transcript_publisher.publish(transcript)
+                self.user_publisher.publish(transcript)
+                self.get_logger().info(f'ASR: {text}')
+                self.publish_status(
+                    'LISTENING', '识别完成', transcript=text,
+                    wake=reason,
+                    latency_sec=round(time.monotonic() - started, 3),
+                )
             except Exception as exception:
                 self.publish_status('ERROR', f'语音识别失败：{exception}')
             finally:

@@ -14,8 +14,11 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 
 from showroom_voice_core import (  # noqa: E402
     assistant_reply,
+    DuplicateSuppressor,
+    meaningful_transcript,
     pcm_rms,
     UtteranceSegmenter,
+    WakeWordGate,
     write_pcm_wav,
 )
 
@@ -90,6 +93,61 @@ def main():
             assert stream.getsampwidth() == 2
             assert stream.getframerate() == 1000
             assert stream.getnframes() == samples * 3
+
+    # Wake word gating: an empty list disables the gate (legacy behaviour).
+    open_gate = WakeWordGate(wake_words=[], session_sec=10.0)
+    assert open_gate.filter('随便说点什么', now=0.0)[0] is True
+    gate = WakeWordGate(wake_words=['开始', '开始导览'], session_sec=10.0)
+    assert gate.filter('不知道说什么', now=1.0) == (
+        False, '不知道说什么', 'wake_required')
+    accepted, text, reason = gate.filter('开始导览', now=2.0)
+    assert accepted and reason == 'wake_word' and text == '开始导览'
+    accepted, text, reason = gate.filter('跳过科技舞蹈展厅', now=5.0)
+    assert accepted and reason == 'session'
+    assert gate.filter('继续参观', now=50.0)[0] is False
+
+    # Repeated identical commands are suppressed within the window.
+    dedup = DuplicateSuppressor(window_sec=5.0)
+    assert dedup.accept('暂停导览', now=0.0) is True
+    assert dedup.accept('暂停导览', now=2.0) is False
+    assert dedup.accept('继续参观', now=3.0) is True
+    assert dedup.accept('暂停导览', now=9.0) is True
+
+    # Ambient/hallucinated transcripts are rejected before wake gating.
+    assert meaningful_transcript('好的') is True
+    assert meaningful_transcript('好') is False
+    assert meaningful_transcript('谢谢观看') is False
+    assert meaningful_transcript('请开始导览吧', no_speech_prob=0.9) is False
+    assert meaningful_transcript('开始导览', no_speech_prob=0.1) is True
+
+    # The adaptive noise floor raises the trigger above steady background so a
+    # quiet room sound is not segmented as speech, while a loud word still is.
+    denoiser = UtteranceSegmenter(
+        sample_rate=1000,
+        frame_ms=20,
+        rms_threshold=100,
+        start_ms=40,
+        end_silence_ms=60,
+        min_speech_ms=60,
+        max_utterance_sec=2,
+        pre_roll_ms=40,
+        adaptive_noise=True,
+        noise_gain=3.0,
+        noise_floor_alpha=0.5,
+    )
+    background = pcm_frame(80, samples)
+    near = pcm_frame(150, samples)
+    output = None
+    for _ in range(8):
+        output = denoiser.feed(background) or output
+    for _ in range(6):
+        output = denoiser.feed(near) or output
+    assert output is None
+    for _ in range(6):
+        output = denoiser.feed(pcm_frame(1000, samples)) or output
+    for _ in range(4):
+        output = denoiser.feed(background) or output
+    assert output is not None
 
     print('Voice VAD, WAV, and assistant reply scenarios: OK')
 
