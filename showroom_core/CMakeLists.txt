@@ -39,6 +39,7 @@ if(BUILD_TESTING)
   foreach(test_name
       action_policy
       business_logic
+      mission_planning
       monitor_logic
       panel
       plan
