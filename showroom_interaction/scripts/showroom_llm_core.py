@@ -20,8 +20,10 @@ from showroom_llm_contract import (
 from showroom_llm_prompt import (
     build_messages,
     compact_context,
+    detect_drink,
     ground_explanation_result,
     normalize_multi_task_result,
+    parse_duration_sec,
 )
 from showroom_ollama_client import OllamaClient
 
@@ -146,9 +148,8 @@ class MockBackend:
         """Classify a few Chinese phrases without a model server."""
         user_text = messages[-1]['content'].strip()
         normalized = user_text.lower()
-        duration_match = re.search(r'(\d+(?:\.\d+)?)\s*秒', user_text)
-        duration = (
-            float(duration_match.group(1)) if duration_match else None)
+        duration_match = parse_duration_sec(user_text)
+        duration = duration_match if duration_match is not None else None
         coffee_robot = any(word in user_text for word in (
             '绿色', '服务机器人', '咖啡机器人', '送餐机器人', '配送机器人',
             '送饮料机器人'))
@@ -156,8 +157,7 @@ class MockBackend:
             '两个机器人', '两台机器人', '所有机器人', '全部机器人'))
         stay_request = any(word in user_text for word in (
             '多待', '多呆', '停留', '待一会', '呆一会'))
-        drink_request = any(word in user_text for word in (
-            '饮料', '咖啡', '水', '果汁'))
+        drink_request = detect_drink(user_text) is not None
         delivery_verb = has_delivery_verb(user_text)
         if stay_request and drink_request:
             pause = {'action': 'pause', 'robot': 'guide'}
@@ -198,7 +198,8 @@ class MockBackend:
                 '下一个任务', '下个展区', '继续下一个')):
             result = {'intent': 'next_task'}
         elif any(word in user_text for word in (
-                '暂停', '等一下', '稍等', '多看一会', '别往前走')):
+                '暂停', '等一下', '稍等', '多看一会', '别往前走',
+                '停一下', '停下', '先停', '别走', '别动')):
             if coffee_robot or all_robots:
                 result = {
                     'intent': 'robot_action',
@@ -232,10 +233,10 @@ class MockBackend:
         elif drink_request and delivery_verb:
             result = {
                 'intent': 'deliver_drink',
-                'drink': resolve_drink(user_text),
-                'target': resolve_delivery_target(user_text) or 'lounge',
+                'drink': detect_drink(user_text) or 'coffee',
+                'target': resolve_delivery_target(user_text) or 'current_task',
             }
-        elif '咖啡' in user_text and not any(
+        elif drink_request and not any(
                 word in user_text for word in ('导览', '参观', '讲解')):
             result = {'intent': 'request_coffee'}
         elif any(word in user_text for word in ('导览', '参观', '讲解', '开始')):

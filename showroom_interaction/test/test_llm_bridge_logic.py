@@ -257,9 +257,9 @@ def main():
         'intent': 'deliver_drink', 'drink': 'juice', 'target': 'robotics_hall'}
     assert command_from_result(infer_with_mock('送咖啡去休息区')) == {
         'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'lounge'}
-    # A delivery without any venue still resolves to a valid destination.
+    # A delivery without any venue defaults to the current exhibit.
     assert command_from_result(infer_with_mock('送杯咖啡过来')) == {
-        'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'lounge'}
+        'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'current_task'}
 
     # Nicknames and ordinals are normalized on the full bridge pipeline.
     assert command_from_result(infer('送餐机器人暂停20秒')) == {
@@ -286,6 +286,18 @@ def main():
         'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'vision_hall'}
     assert command_from_result(infer('时空遂道送杯咖啡')) == {
         'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'time_tunnel'}
+    assert command_from_result(infer('送杯咖非到第一场馆')) == {
+        'intent': 'deliver_drink', 'drink': 'coffee',
+        'target': 'technology_history'}
+    assert command_from_result(infer('送杯饮料到舞稻厅')) == {
+        'intent': 'deliver_drink', 'drink': 'drink', 'target': 'dance_hall'}
+    assert command_from_result(infer('到第三个场馆待30秒')) == {
+        'intent': 'temporary_visit', 'target': 'robotics_hall',
+        'dwell_sec': 30.0, 'timeout_sec': 300.0}
+    assert command_from_result(
+        infer('带我去隧道待三十秒'))['dwell_sec'] == 30.0
+    assert command_from_result(infer('导览机器人先停一下')) == {
+        'intent': 'pause_tour'}
     # A plain "开始导览" must not be mistaken for a robot nickname.
     assert command_from_result(infer('开始导览')) == {
         'intent': 'start_tour', 'coffee': True}

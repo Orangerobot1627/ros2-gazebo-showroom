@@ -22,8 +22,11 @@ PLACE_ALIASES = (
     (('科技发展历史展区', '科技历史馆', '历史馆', '历史展区', '科技发展史',
       '发展历史馆', '科技史'),
      'technology_history'),
-    (('时空科技隧道', '时空隧道', '科技隧道', '时光隧道', '隧道'), 'time_tunnel'),
-    (('科技舞蹈展厅', '科技舞蹈馆', '舞蹈馆', '舞蹈展厅', '数字艺术馆', '舞厅'),
+    (('时空科技隧道', '时空隧道', '科技隧道', '时光隧道', '隧道',
+      '遂道', '随道'),
+     'time_tunnel'),
+    (('科技舞蹈展厅', '科技舞蹈馆', '舞蹈馆', '舞蹈展厅', '舞蹈厅',
+      '数字艺术馆', '舞厅'),
      'dance_hall'),
     (('智能休息服务区', '咖啡休息区', '休息区', '休息室', '服务区', '休闲区'),
      'lounge'),
@@ -69,6 +72,52 @@ def _fuzzy_present(text, aliases):
             if matches / size >= FUZZY_RATIO:
                 return True
     return False
+
+
+DRINK_WORDS = (
+    ('咖啡', 'coffee'), ('咖非', 'coffee'), ('咖妃', 'coffee'),
+    ('加啡', 'coffee'), ('咖灰', 'coffee'),
+    ('饮料', 'drink'), ('饮枓', 'drink'),
+    ('果汁', 'juice'), ('果知', 'juice'),
+    ('水', 'water'),
+)
+
+
+def detect_drink(text):
+    """Return the canonical drink named in the sentence, or None."""
+    for word, name in DRINK_WORDS:
+        if word in text:
+            return name
+    for word, name in DRINK_WORDS:
+        if len(word) >= 2 and _fuzzy_present(text, (word,)):
+            return name
+    return None
+
+
+CHINESE_DIGITS = {
+    '零': 0, '一': 1, '二': 2, '两': 2, '三': 3, '四': 4, '五': 5,
+    '六': 6, '七': 7, '八': 8, '九': 9,
+}
+
+
+def parse_duration_sec(text):
+    """Parse a duration like '30秒' or '三十秒' into seconds, or None."""
+    match = re.search(r'(\d+(?:\.\d+)?)\s*秒', text)
+    if match:
+        return float(match.group(1))
+    match = re.search(r'([零一二两三四五六七八九十]+)\s*秒', text)
+    if not match:
+        return None
+    digits = match.group(1)
+    if '十' in digits:
+        head, _, tail = digits.partition('十')
+        tens = CHINESE_DIGITS.get(head, 1) if head else 1
+        ones = CHINESE_DIGITS.get(tail, 0) if tail else 0
+        return float(tens * 10 + ones)
+    total = 0
+    for character in digits:
+        total = total * 10 + CHINESE_DIGITS.get(character, 0)
+    return float(total)
 
 
 def _exact_task_ids(text):
@@ -158,10 +207,11 @@ def normalize_semantic_result(document, user_text):
         word in text for word in ('只看', '只参观', '只去', '只逛'))
     skip_request = any(word in text for word in (
         '不看', '不参观', '不去', '别去', '跳过', '略过', '取消参观'))
-    drink_request = any(word in text for word in ('饮料', '咖啡', '水', '果汁'))
-    delivery_request = any(word in text for word in ('送', '拿', '来一杯', '给我'))
-    drink = 'juice' if '果汁' in text else 'water' if re.search(
-        r'(?:一杯|杯|送|拿|来)[^，。]{0,5}水', text) else 'coffee'
+    drink_name = detect_drink(text)
+    drink_request = drink_name is not None
+    delivery_request = any(word in text for word in (
+        '送', '拿', '给', '带', '端', '来杯', '来几杯', '来一'))
+    drink = drink_name or 'coffee'
     if tasks and (selection_request or skip_request) \
             and drink_request and delivery_request:
         return {
@@ -195,19 +245,21 @@ def normalize_semantic_result(document, user_text):
             'intent': 'deliver_drink', 'drink': drink,
             'target': tasks[0], 'reply': reply}
     travel_request = any(word in text for word in (
-        '去', '前往', '带我去', '带我到', '过去', '导航到')) and not any(
-            word in text for word in ('到了吗', '到哪', '怎么去', '如何去'))
+        '去', '到', '前往', '带我去', '带我到', '过去', '导航到')) and not any(
+            word in text for word in (
+                '到了吗', '到哪', '怎么去', '如何去', '多远', '多久',
+                '吗', '呢', '?', '？'))
     if tasks and travel_request:
         result = {
             'intent': 'temporary_visit',
             'target': tasks[0],
             'reply': reply,
         }
-        duration_match = re.search(r'(\d+(?:\.\d+)?)\s*秒', text)
+        seconds = parse_duration_sec(text)
         stay_request = any(word in text for word in (
-            '多待', '多呆', '停留', '待一会', '呆一会', '多看一会'))
-        if duration_match:
-            result['dwell_sec'] = float(duration_match.group(1))
+            '多待', '多呆', '停留', '待一会', '呆一会', '多看一会', '待', '呆'))
+        if seconds is not None:
+            result['dwell_sec'] = seconds
         elif stay_request:
             result['dwell_sec'] = 20.0
         return result
@@ -221,20 +273,15 @@ def normalize_multi_task_result(document, user_text):
     text = str(user_text)
     stay_request = any(word in text for word in (
         '多待', '多呆', '停留', '待一会', '呆一会', '再看看', '多看一会'))
-    drink_request = any(word in text for word in (
-        '饮料', '咖啡', '水', '果汁'))
+    drink_request = detect_drink(text) is not None
     if not (stay_request and drink_request):
         return document
 
-    duration_match = re.search(r'(\d+(?:\.\d+)?)\s*秒', text)
+    duration_match = parse_duration_sec(text)
     pause = {'action': 'pause', 'robot': 'guide'}
     if duration_match:
-        pause['duration_sec'] = float(duration_match.group(1))
-    drink = 'coffee'
-    if '果汁' in text:
-        drink = 'juice'
-    elif re.search(r'(?:一杯|杯|送|来)[^，。]{0,4}水', text):
-        drink = 'water'
+        pause['duration_sec'] = duration_match
+    drink = detect_drink(text) or 'coffee'
     target = 'current_task'
     for aliases, task_id in PLACE_ALIASES:
         if any(alias in text for alias in aliases):
