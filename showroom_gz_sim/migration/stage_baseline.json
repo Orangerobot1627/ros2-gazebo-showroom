@@ -1,0 +1,84 @@
+{
+  "baseline_version": 1,
+  "source_repository": "demo_stage",
+  "source_commit": "fa25d97eb48e8d3d0a73c1a40c696801de96f572",
+  "source_files": {
+    "config/routes.yaml": "bee12c65c6d0357b846976a6774dcdbe57d16cccdaa91e7e9e7d537769811522",
+    "config/navigation_graph.yaml": "b7554c8ddb7ae8533dfb240a5d76373a54f7729d462e51e4d2c6a43c5ae143b9",
+    "config/task_units.yaml": "7bccfeb38b6c9194d9d2a8b778272ef1e69fa447900ab45bc5b28529fc5ccf50",
+    "config/action_policy.yaml": "fed72f7dc49e199120418d597b7b5c19888305f771edfc25734feb12e2e771c3",
+    "world/include/showroom_robots.inc": "ce2c1f2f20c2f03ad4332f155c1cc566ee32cd523278d0145c9a89cde77ce935"
+  },
+  "world": {
+    "frame_id": "world",
+    "map_frame_id_after_migration": "map",
+    "width_m": 50.0,
+    "height_m": 35.0,
+    "resolution_m": 0.05,
+    "origin": [-25.0, -17.5, 0.0]
+  },
+  "guide_robot": {
+    "namespace": "robot_0",
+    "initial_pose": [0.0, -14.5, 1.57079632679],
+    "body_size_m": [0.62, 0.48, 0.38],
+    "mass_kg": 24.0,
+    "lidar": {
+      "minimum_range_m": 0.05,
+      "maximum_range_m": 12.0,
+      "field_of_view_deg": 270.0,
+      "samples": 540
+    }
+  },
+  "route_waypoint_counts": {
+    "guide_history_blue": 12,
+    "vision_yellow": 12,
+    "robotics_yellow": 13,
+    "time_tunnel_red": 10,
+    "dance_yellow": 13,
+    "lounge_yellow": 10,
+    "guide_full_route": 65,
+    "coffee_delivery_route": 19
+  },
+  "task_units": [
+    "reception",
+    "technology_history",
+    "vision_hall",
+    "robotics_hall",
+    "time_tunnel",
+    "dance_hall",
+    "lounge"
+  ],
+  "business_state_chains": {
+    "guide": ["IDLE", "RECEPTION", "TOURING", "GOING_TO_LOUNGE", "COMPLETED"],
+    "coffee": ["STANDBY", "TO_PICKUP", "PICKUP", "DELIVERING", "DELIVERED", "RETURNING", "RETURNED"]
+  },
+  "coffee_event_sequence": [
+    "route_started",
+    "pickup",
+    "depart_pickup",
+    "delivery",
+    "returning",
+    "standby",
+    "route_completed"
+  ],
+  "stage_ros_topics": [
+    "/robot_0/cmd_vel",
+    "/robot_0/odom",
+    "/robot_0/base_scan",
+    "/robot_1/cmd_vel",
+    "/robot_1/odom",
+    "/robot_1/base_scan",
+    "/clock",
+    "/tf",
+    "/tf_static"
+  ],
+  "gazebo_milestone_2_topics": [
+    "/robot_0/cmd_vel",
+    "/robot_0/odom",
+    "/robot_0/scan",
+    "/robot_0/joint_states",
+    "/clock",
+    "/tf",
+    "/tf_static"
+  ]
+}

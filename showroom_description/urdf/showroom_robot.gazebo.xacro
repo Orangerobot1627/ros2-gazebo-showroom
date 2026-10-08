@@ -1,0 +1,226 @@
+<?xml version="1.0"?>
+<sdf version="1.10" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Gazebo-side physical model. Topic and frame names are explicit so the
+       same model can later be instantiated once per robot namespace. -->
+  <xacro:arg name="namespace" default="robot_0"/>
+  <xacro:arg name="robot_name" default="guide_robot"/>
+  <xacro:arg name="body_color" default="0.12 0.48 0.95 1"/>
+
+  <model name="$(arg robot_name)">
+    <self_collide>false</self_collide>
+    <allow_auto_disable>false</allow_auto_disable>
+
+    <link name="base_link">
+      <inertial>
+        <pose>-0.04 0 0.19 0 0 0</pose>
+        <mass>22.5</mass>
+        <inertia>
+          <ixx>0.50</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.78</iyy><iyz>0</iyz><izz>0.95</izz>
+        </inertia>
+      </inertial>
+      <!-- Keep the chassis collision clear of the floor. Its underside at
+           z=0.045 sits just above the wheel and caster contact (z=0) so the
+           robot rests on its wheels; a flush chassis pins the base and blocks
+           in-place rotation even while the drive wheels spin. -->
+      <collision name="body_collision">
+        <pose>-0.04 0 0.235 0 0 0</pose>
+        <geometry><box><size>0.62 0.48 0.38</size></box></geometry>
+      </collision>
+      <visual name="body_visual">
+        <pose>-0.04 0 0.24 0 0 0</pose>
+        <geometry><cylinder><radius>0.24</radius><length>0.44</length></cylinder></geometry>
+        <material>
+          <ambient>$(arg body_color)</ambient>
+          <diffuse>$(arg body_color)</diffuse>
+          <specular>0.15 0.20 0.30 1</specular>
+        </material>
+      </visual>
+      <!-- The base_scan plane sits at z=0.50. Keep every visual clear of that
+           height so the gpu_lidar cannot detect the robot itself: the base ends
+           at z=0.46 and the torso starts at z=0.57. Only a thin neck crosses the
+           plane, and its 0.07 m radius subtends ~18 deg, well outside the
+           +/-135 deg lidar field of view. -->
+      <visual name="neck_visual">
+        <pose>-0.04 0 0.52 0 0 0</pose>
+        <geometry><cylinder><radius>0.07</radius><length>0.18</length></cylinder></geometry>
+        <material>
+          <ambient>$(arg body_color)</ambient>
+          <diffuse>$(arg body_color)</diffuse>
+          <specular>0.20 0.25 0.35 1</specular>
+        </material>
+      </visual>
+      <visual name="torso_visual">
+        <pose>-0.04 0 0.72 0 0 0</pose>
+        <geometry><cylinder><radius>0.16</radius><length>0.30</length></cylinder></geometry>
+        <material>
+          <ambient>$(arg body_color)</ambient>
+          <diffuse>$(arg body_color)</diffuse>
+          <specular>0.20 0.25 0.35 1</specular>
+        </material>
+      </visual>
+      <visual name="shoulder_ring_visual">
+        <pose>-0.04 0 0.86 0 0 0</pose>
+        <geometry><cylinder><radius>0.19</radius><length>0.06</length></cylinder></geometry>
+        <material><ambient>0.80 0.88 0.96 1</ambient><diffuse>0.92 0.96 1.00 1</diffuse></material>
+      </visual>
+      <visual name="head_visual">
+        <pose>-0.04 0 1.03 0 0 0</pose>
+        <geometry><sphere><radius>0.18</radius></sphere></geometry>
+        <material>
+          <ambient>$(arg body_color)</ambient>
+          <diffuse>$(arg body_color)</diffuse>
+          <specular>0.28 0.32 0.42 1</specular>
+        </material>
+      </visual>
+      <visual name="face_screen_visual">
+        <pose>0.125 0 1.04 0 0 0</pose>
+        <geometry><box><size>0.025 0.22 0.105</size></box></geometry>
+        <material><ambient>0.01 0.03 0.06 1</ambient><diffuse>0.02 0.08 0.14 1</diffuse><emissive>0.02 0.24 0.42 1</emissive></material>
+      </visual>
+      <visual name="left_eye_visual">
+        <pose>0.141 0.055 1.055 0 0 0</pose>
+        <geometry><sphere><radius>0.018</radius></sphere></geometry>
+        <material><ambient>0.15 0.85 1 1</ambient><diffuse>0.15 0.85 1 1</diffuse><emissive>0.15 0.85 1 1</emissive></material>
+      </visual>
+      <visual name="right_eye_visual">
+        <pose>0.141 -0.055 1.055 0 0 0</pose>
+        <geometry><sphere><radius>0.018</radius></sphere></geometry>
+        <material><ambient>0.15 0.85 1 1</ambient><diffuse>0.15 0.85 1 1</diffuse><emissive>0.15 0.85 1 1</emissive></material>
+      </visual>
+      <collision name="front_caster_collision">
+        <pose>0.22 0 0.045 0 0 0</pose>
+        <geometry><sphere><radius>0.045</radius></sphere></geometry>
+        <surface><friction><ode><mu>0.08</mu><mu2>0.08</mu2></ode></friction></surface>
+      </collision>
+      <collision name="rear_caster_collision">
+        <pose>-0.24 0 0.045 0 0 0</pose>
+        <geometry><sphere><radius>0.045</radius></sphere></geometry>
+        <surface><friction><ode><mu>0.08</mu><mu2>0.08</mu2></ode></friction></surface>
+      </collision>
+    </link>
+
+    <link name="left_wheel_link">
+      <inertial>
+        <pose>0 0.20 0.08 -1.57079632679 0 0</pose>
+        <mass>0.75</mass>
+        <inertia>
+          <ixx>0.0014</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.0014</iyy><iyz>0</iyz><izz>0.0024</izz>
+        </inertia>
+      </inertial>
+      <collision name="left_wheel_collision">
+        <pose>0 0.20 0.08 -1.57079632679 0 0</pose>
+        <geometry><cylinder><radius>0.08</radius><length>0.045</length></cylinder></geometry>
+        <surface><friction><ode><mu>1.2</mu><mu2>1.2</mu2><slip1>0.02</slip1></ode></friction></surface>
+      </collision>
+      <visual name="left_wheel_visual">
+        <pose>0 0.20 0.08 -1.57079632679 0 0</pose>
+        <geometry><cylinder><radius>0.08</radius><length>0.045</length></cylinder></geometry>
+        <material><ambient>0.02 0.02 0.02 1</ambient><diffuse>0.04 0.04 0.04 1</diffuse></material>
+      </visual>
+    </link>
+
+    <link name="right_wheel_link">
+      <inertial>
+        <pose>0 -0.20 0.08 -1.57079632679 0 0</pose>
+        <mass>0.75</mass>
+        <inertia>
+          <ixx>0.0014</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.0014</iyy><iyz>0</iyz><izz>0.0024</izz>
+        </inertia>
+      </inertial>
+      <collision name="right_wheel_collision">
+        <pose>0 -0.20 0.08 -1.57079632679 0 0</pose>
+        <geometry><cylinder><radius>0.08</radius><length>0.045</length></cylinder></geometry>
+        <surface><friction><ode><mu>1.2</mu><mu2>1.2</mu2><slip1>0.02</slip1></ode></friction></surface>
+      </collision>
+      <visual name="right_wheel_visual">
+        <pose>0 -0.20 0.08 -1.57079632679 0 0</pose>
+        <geometry><cylinder><radius>0.08</radius><length>0.045</length></cylinder></geometry>
+        <material><ambient>0.02 0.02 0.02 1</ambient><diffuse>0.04 0.04 0.04 1</diffuse></material>
+      </visual>
+    </link>
+
+    <link name="base_scan">
+      <pose relative_to="base_link">0.18 0 0.50 0 0 0</pose>
+      <inertial>
+        <mass>0.10</mass>
+        <inertia>
+          <ixx>0.0001</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.0001</iyy><iyz>0</iyz><izz>0.0001</izz>
+        </inertia>
+      </inertial>
+      <visual name="lidar_visual">
+        <geometry><cylinder><radius>0.04</radius><length>0.06</length></cylinder></geometry>
+        <material><ambient>0.08 0.50 0.90 1</ambient><diffuse>0.10 0.70 1.00 1</diffuse></material>
+      </visual>
+      <sensor name="showroom_lidar" type="gpu_lidar">
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        <update_rate>10</update_rate>
+        <topic>/$(arg namespace)/scan</topic>
+        <gz_frame_id>$(arg namespace)/base_scan</gz_frame_id>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>540</samples>
+              <resolution>1.0</resolution>
+              <min_angle>-2.35619449019</min_angle>
+              <max_angle>2.35619449019</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>0.05</min>
+            <max>12.0</max>
+            <resolution>0.01</resolution>
+          </range>
+          <noise><type>gaussian</type><mean>0.0</mean><stddev>0.01</stddev></noise>
+        </ray>
+      </sensor>
+    </link>
+
+    <joint name="left_wheel_joint" type="revolute">
+      <parent>base_link</parent><child>left_wheel_link</child>
+      <pose>0 0.20 0.08 -1.57079632679 0 0</pose>
+      <axis><xyz>0 0 1</xyz></axis>
+    </joint>
+    <joint name="right_wheel_joint" type="revolute">
+      <parent>base_link</parent><child>right_wheel_link</child>
+      <pose>0 -0.20 0.08 -1.57079632679 0 0</pose>
+      <axis><xyz>0 0 1</xyz></axis>
+    </joint>
+    <joint name="base_scan_joint" type="fixed">
+      <parent>base_link</parent><child>base_scan</child>
+    </joint>
+
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.40</wheel_separation>
+      <wheel_radius>0.08</wheel_radius>
+      <max_linear_acceleration>0.60</max_linear_acceleration>
+      <min_linear_acceleration>-0.60</min_linear_acceleration>
+      <max_angular_acceleration>2.094</max_angular_acceleration>
+      <min_angular_acceleration>-2.094</min_angular_acceleration>
+      <max_linear_velocity>0.85</max_linear_velocity>
+      <min_linear_velocity>-0.85</min_linear_velocity>
+      <max_angular_velocity>1.5708</max_angular_velocity>
+      <min_angular_velocity>-1.5708</min_angular_velocity>
+      <topic>/$(arg namespace)/cmd_vel</topic>
+      <odom_topic>/$(arg namespace)/odom</odom_topic>
+      <tf_topic>/$(arg namespace)/tf</tf_topic>
+      <frame_id>$(arg namespace)/odom</frame_id>
+      <child_frame_id>$(arg namespace)/base_footprint</child_frame_id>
+      <odom_publish_frequency>30</odom_publish_frequency>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <joint_name>left_wheel_joint</joint_name>
+      <joint_name>right_wheel_joint</joint_name>
+      <topic>/$(arg namespace)/joint_states</topic>
+      <update_rate>30</update_rate>
+    </plugin>
+  </model>
+</sdf>

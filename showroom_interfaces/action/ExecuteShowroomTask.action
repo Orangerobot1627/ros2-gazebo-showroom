@@ -1,0 +1,24 @@
+# Submit one validated high-level showroom task.
+string request_id
+string intent
+string robot
+string action
+string target
+string drink
+string[] tasks
+float32 duration_sec
+float32 dwell_sec
+float32 timeout_sec
+bool coffee
+# Multi-step plans use the same validated JSON plan array as the compatibility
+# topic. Direct velocity, coordinates, and motor commands are never accepted.
+string plan_json
+---
+bool accepted
+string detail
+string final_state
+---
+string state
+string current_task
+float32 progress
+string detail

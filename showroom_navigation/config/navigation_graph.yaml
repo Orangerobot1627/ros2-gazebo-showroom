@@ -1,0 +1,50 @@
+version: 1
+frame_id: map
+
+# The Stage backend builds a bidirectional graph from already validated route
+# segments. Connectors join the guide and service networks at known open areas.
+route_sources:
+  - guide_full_route
+  - coffee_delivery_route
+
+connectors:
+  # These edges let the service robot enter the visitor route. The guide robot
+  # must remain on guide_full_route so task order and exhibit progress stay
+  # identical to the original tour.
+  - {from: coffee_pickup_approach, to: coffee_south_east, allowed_robots: [robot_1]}
+  - {from: lounge_delivery_approach, to: lounge_side_entry, allowed_robots: [robot_1]}
+  - {from: lounge_delivery, to: lounge_sofa_area, allowed_robots: [robot_1]}
+
+  # Map-validated transit shortcuts. The service robot uses these corridors to
+  # avoid circling every display island while delivering to a named hall. The
+  # guide route keeps the complete exhibit loops.
+  - {from: coffee_south_east, to: history_panel_3, allowed_robots: [robot_0, robot_1], allowed_request_types: [delivery, temporary_visit]}
+  - {from: vision_hall_entry, to: vision_loop_close, allowed_robots: [robot_0, robot_1], allowed_request_types: [delivery, temporary_visit]}
+  - {from: vision_loop_close, to: vision_exit, allowed_robots: [robot_0, robot_1], allowed_request_types: [delivery, temporary_visit]}
+  - {from: robotics_entry_approach, to: robotics_loop_close, allowed_robots: [robot_0, robot_1], allowed_request_types: [delivery, temporary_visit]}
+  - {from: robotics_entry_approach, to: hidden_door_approach, allowed_robots: [robot_0, robot_1], allowed_request_types: [delivery, temporary_visit]}
+  - {from: dance_inside, to: dance_exit_approach, allowed_robots: [robot_0, robot_1], allowed_request_types: [delivery, temporary_visit]}
+
+  # The open central aisle lets a visitor-requested temporary guide mission
+  # bypass exhibit loops. Default guide_itinerary requests cannot use it.
+  - {from: stairs_clearance, to: robotics_entry_approach, allowed_robots: [robot_0], allowed_request_types: [temporary_visit]}
+
+service:
+  standby: coffee_robot_standby
+  pickup: coffee_pickup
+
+# A service robot meets visitors at an accessible edge of each task unit. The
+# points deliberately avoid narrow display loops and the hidden tunnel.
+delivery_targets:
+  reception: stairs_clearance
+  technology_history: coffee_south_east
+  vision_hall: vision_inside
+  robotics_hall: robotics_inside
+  time_tunnel: hidden_door_approach
+  dance_hall: dance_inside
+  lounge: lounge_delivery
+
+cost_profiles:
+  shortest:
+    distance_weight: 1.0
+    connector_penalty: 0.0

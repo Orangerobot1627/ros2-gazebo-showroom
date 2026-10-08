@@ -1,0 +1,6 @@
+# Reset one Gazebo robot to a map-frame pose.
+string robot_id
+geometry_msgs/Pose2D pose
+---
+bool success
+string message
