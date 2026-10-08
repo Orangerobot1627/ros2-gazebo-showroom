@@ -275,6 +275,18 @@ def normalize_semantic_result(document, user_text):
         elif stay_request:
             result['dwell_sec'] = 20.0
         return result
+    stay_only = any(word in text for word in (
+        '多待', '多呆', '停留', '待一会', '呆一会', '多看一会')) \
+        and not drink_request
+    if tasks and stay_only:
+        result = {
+            'intent': 'temporary_visit',
+            'target': tasks[0],
+            'reply': reply,
+        }
+        seconds = parse_duration_sec(text)
+        result['dwell_sec'] = seconds if seconds is not None else 20.0
+        return result
     return document
 
 
@@ -383,7 +395,7 @@ def build_messages(user_text, business=None, monitor=None, knowledge=None):
 - request_coffee：请求咖啡
 - deliver_drink：把 drink 指定的饮料送到 target 指定场馆
 - pause_tour：临时暂停蓝色导览机器人，可增加 duration_sec，默认 20 秒
-- resume_tour：继续导览
+- resume_tour：继续导览、返回原路线、回到原路线（临时任务结束后回到默认行程）
 - cancel_all：取消全部任务
 - reset：重置业务
 - robot_action：控制指定机器人。robot 只能是 guide、coffee、all；action 只能是
@@ -426,6 +438,7 @@ def build_messages(user_text, business=None, monitor=None, knowledge=None):
 讲解当前展区：{{"intent":"explain_current","reply":"根据 current_task.summary 生成的讲解"}}
 深入讲解：{{"intent":"explain_more","reply":"根据 current_task.detail 生成的补充讲解"}}
 多任务示例：{{"intent":"execute_plan","plan":[{{"action":"pause","robot":"guide","duration_sec":20}},{{"action":"deliver_drink","drink":"coffee","target":"current_task"}}]}}
+三步骤计划示例：{{"intent":"execute_plan","plan":[{{"action":"temporary_visit","target":"robotics_hall","dwell_sec":10}},{{"action":"deliver_drink","drink":"coffee","target":"lounge"}},{{"action":"announce","text":"三步骤计划已完成。"}}]}}
 除 explain_current 和 explain_more 外，reply 字段不是必需的。
 讲解只能使用当前状态中的 current_task 内容，不得编造展品、数字或能力。
 同一句话有两个及以上明确动作时，必须使用 execute_plan，不要只返回其中一个 intent。

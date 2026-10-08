@@ -94,6 +94,8 @@ CASES = [
     ('去机器人馆看看', 'temporary_visit', visit('robotics_hall')),
     ('前往休息区', 'temporary_visit', visit('lounge')),
     ('到第三个场馆待30秒', 'temporary_visit', visit('robotics_hall', 30.0)),
+    ('在机器人展厅停留二十秒', 'temporary_visit',
+     visit('robotics_hall', 20.0)),
     ('带我去隧道待三十秒', 'temporary_visit', visit('time_tunnel', 30.0)),
     # --- rendezvous (two robots meet) ---
     ('两个机器人在第二场馆会和', 'rendezvous', meet('vision_hall')),
@@ -113,6 +115,8 @@ CASES = [
     ('开始导览，不需要咖啡', 'start_tour', {'intent': 'start_tour', 'coffee': False}),
     ('暂停一下', 'pause_tour', {'intent': 'pause_tour'}),
     ('继续参观', 'resume_tour', {'intent': 'resume_tour'}),
+    ('返回原路线', 'resume_tour', {'intent': 'resume_tour'}),
+    ('临时任务结束，回到原路线', 'resume_tour', {'intent': 'resume_tour'}),
     ('跳过这个展厅', 'skip_current', {'intent': 'skip_current'}),
     ('下个展区', 'next_task', {'intent': 'next_task'}),
     ('这里没兴趣，跳过', 'skip_current', {'intent': 'skip_current'}),
@@ -137,6 +141,15 @@ CASES = [
             {'action': 'visit_only', 'tasks': ['vision_hall']},
             {'action': 'deliver_drink', 'drink': 'coffee',
              'target': 'vision_hall'},
+        ]}),
+    ('执行一个三步骤计划', 'execute_plan', {
+        'intent': 'execute_plan',
+        'plan': [
+            {'action': 'temporary_visit', 'target': 'robotics_hall',
+             'dwell_sec': 10.0, 'timeout_sec': 300.0},
+            {'action': 'deliver_drink', 'drink': 'coffee',
+             'target': 'lounge'},
+            {'action': 'announce', 'text': '三步骤计划已完成。'},
         ]}),
     # --- status and chat (no command) ---
     ('机器人现在到哪了', 'ask_status', None),

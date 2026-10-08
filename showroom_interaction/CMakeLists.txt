@@ -13,6 +13,7 @@ install(
     scripts/showroom_asr.py
     scripts/showroom_llm_bridge.py
     scripts/showroom_tts.py
+    scripts/showroom_voice_acceptance.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

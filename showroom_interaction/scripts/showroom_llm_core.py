@@ -184,6 +184,18 @@ class MockBackend:
                 ],
             }
         elif any(word in user_text for word in (
+                '三步骤', '三步', '三个步骤', '三个任务', '三段计划')):
+            result = {
+                'intent': 'execute_plan',
+                'plan': [
+                    {'action': 'temporary_visit', 'target': 'robotics_hall',
+                     'dwell_sec': 10.0},
+                    {'action': 'deliver_drink', 'drink': 'coffee',
+                     'target': 'lounge'},
+                    {'action': 'announce', 'text': '三步骤计划已完成。'},
+                ],
+            }
+        elif any(word in user_text for word in (
                 '状态', '到哪', '为什么停', '在哪', '了吗', '到了吗',
                 '到了没', '走到哪', '多远', '进度', '还有多久')):
             result = {'intent': 'ask_status'}
@@ -221,7 +233,9 @@ class MockBackend:
                 result = {'intent': 'pause_tour'}
             if duration is not None:
                 result['duration_sec'] = duration
-        elif any(word in user_text for word in ('继续', '恢复')):
+        elif any(word in user_text for word in (
+                '继续', '恢复', '返回原路线', '回到原路线', '返回原路',
+                '返回导览', '继续原路线', '回到路线')):
             if coffee_robot or all_robots:
                 result = {
                     'intent': 'robot_action',
