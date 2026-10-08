@@ -26,6 +26,64 @@ from showroom_llm_prompt import (
 from showroom_ollama_client import OllamaClient
 
 
+DRINK_KEYWORDS = (
+    ('咖啡', 'coffee'), ('饮料', 'drink'), ('果汁', 'juice'), ('水', 'water'),
+)
+# Ordinals count the five exhibit halls, not the reception and lounge areas.
+EXHIBIT_ORDER = (
+    'technology_history', 'vision_hall', 'robotics_hall',
+    'time_tunnel', 'dance_hall',
+)
+TASK_KEYWORDS = (
+    ('科技发展历史', 'technology_history'),
+    ('历史', 'technology_history'),
+    ('视觉', 'vision_hall'),
+    ('机器人', 'robotics_hall'),
+    ('时空', 'time_tunnel'),
+    ('隧道', 'time_tunnel'),
+    ('舞蹈', 'dance_hall'),
+    ('休息', 'lounge'),
+    ('接待', 'reception'),
+    ('入口', 'reception'),
+    ('前台', 'reception'),
+)
+ORDINAL_DIGITS = {
+    '一': 1, '1': 1, '二': 2, '两': 2, '2': 2, '三': 3, '3': 3,
+    '四': 4, '4': 4, '五': 5, '5': 5,
+}
+DELIVERY_VERBS = ('送', '配送', '拿到', '端', '带', '递')
+
+
+def resolve_drink(text):
+    """Map a drink word in the sentence to the contract drink name."""
+    for keyword, name in DRINK_KEYWORDS:
+        if keyword in text:
+            return name
+    return 'coffee'
+
+
+def resolve_delivery_target(text):
+    """Resolve a delivery task id from explicit names or an exhibit ordinal."""
+    for keyword, task in TASK_KEYWORDS:
+        if keyword in text:
+            return task
+    if '最后' in text:
+        return 'lounge'
+    match = re.search(
+        r'第\s*([一二两三四五12345])\s*(?:个|号)?\s*'
+        r'(?:场馆|展馆|展区|展厅|区|任务|站)?', text)
+    if match:
+        index = ORDINAL_DIGITS.get(match.group(1))
+        if index and 1 <= index <= len(EXHIBIT_ORDER):
+            return EXHIBIT_ORDER[index - 1]
+    return None
+
+
+def has_delivery_verb(text):
+    """Return True when the sentence asks to bring or send something."""
+    return any(word in text for word in DELIVERY_VERBS)
+
+
 class OpenAICompatibleBackend:
     """Adapter for OpenAI-compatible chat-completions endpoints."""
 
@@ -99,6 +157,7 @@ class MockBackend:
             '多待', '多呆', '停留', '待一会', '呆一会'))
         drink_request = any(word in user_text for word in (
             '饮料', '咖啡', '水', '果汁'))
+        delivery_verb = has_delivery_verb(user_text)
         if stay_request and drink_request:
             pause = {'action': 'pause', 'robot': 'guide'}
             if duration is not None:
@@ -168,6 +227,12 @@ class MockBackend:
                 'intent': 'robot_action',
                 'robot': 'coffee',
                 'action': 'start_default',
+            }
+        elif drink_request and delivery_verb:
+            result = {
+                'intent': 'deliver_drink',
+                'drink': resolve_drink(user_text),
+                'target': resolve_delivery_target(user_text) or 'lounge',
             }
         elif '咖啡' in user_text and not any(
                 word in user_text for word in ('导览', '参观', '讲解')):

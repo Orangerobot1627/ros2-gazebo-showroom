@@ -78,6 +78,14 @@ cd /home/xxl/ros2_ws/src/showroom_gz
 ./start_showroom.sh demo
 ```
 
+Stop every showroom process, including nodes that a hard terminal close can
+leave behind (a leftover node is the usual reason an extra robot or Gazebo
+model keeps appearing):
+
+```bash
+./stop_showroom.sh
+```
+
 The default command (`manual`) is the main mode: it opens Gazebo at the entrance,
 where both robot models are visible, and enables local voice commands. Say
 `开始` or `开始导览` after the terminal reports `ASR LISTENING: Whisper 已就绪`;

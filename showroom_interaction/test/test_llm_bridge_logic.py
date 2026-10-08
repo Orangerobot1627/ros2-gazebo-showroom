@@ -237,6 +237,21 @@ def main():
         'duration_sec': 10.0,
     }
 
+    delivered = infer_with_mock('送咖啡到第一个场馆')
+    assert delivered['intent'] == 'deliver_drink'
+    assert command_from_result(delivered) == {
+        'intent': 'deliver_drink', 'drink': 'coffee',
+        'target': 'technology_history'}
+    assert command_from_result(infer_with_mock('送杯水到计算机视觉展厅')) == {
+        'intent': 'deliver_drink', 'drink': 'water', 'target': 'vision_hall'}
+    assert command_from_result(infer_with_mock('送果汁到第三个展区')) == {
+        'intent': 'deliver_drink', 'drink': 'juice', 'target': 'robotics_hall'}
+    assert command_from_result(infer_with_mock('送咖啡去休息区')) == {
+        'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'lounge'}
+    # A delivery without any venue still resolves to a valid destination.
+    assert command_from_result(infer_with_mock('送杯咖啡过来')) == {
+        'intent': 'deliver_drink', 'drink': 'coffee', 'target': 'lounge'}
+
     compact = compact_context(
         {'guide_state': 'TOURING', 'private': 'drop-me'},
         {'robots': {'robot_0': {
