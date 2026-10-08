@@ -12,6 +12,7 @@ install(
   PROGRAMS
     scripts/showroom_monitor.py
     scripts/showroom_panel.py
+    scripts/showroom_speed_profile.py
     scripts/showroom_task_manager.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -40,6 +41,7 @@ if(BUILD_TESTING)
       monitor_logic
       panel
       plan
+      speed_profile
       task_action
       task_units)
     ament_add_test(

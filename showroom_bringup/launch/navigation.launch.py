@@ -5,7 +5,11 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
+from launch.actions import (
+    DeclareLaunchArgument,
+    OpaqueFunction,
+    SetEnvironmentVariable,
+)
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
@@ -30,6 +34,7 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart = LaunchConfiguration('autostart')
     safety_stop_enabled = LaunchConfiguration('safety_stop_enabled')
+    enable_speed_profile = LaunchConfiguration('enable_speed_profile')
 
     configured_params = ParameterFile(
         RewrittenYaml(
@@ -61,6 +66,36 @@ def generate_launch_description():
         'parameters': [configured_params],
     }
 
+    def speed_pipeline(context):
+        """Insert the speed profiler and point the monitor at its output."""
+        enabled = enable_speed_profile.perform(context).strip().lower()
+        profiled = enabled not in ('', '0', 'false')
+        nodes = []
+        if profiled:
+            nodes.append(Node(
+                package='showroom_core',
+                executable='showroom_speed_profile.py',
+                name='speed_profile',
+                namespace=namespace,
+                output='screen',
+                parameters=[{'use_sim_time': use_sim_time}],
+            ))
+        nodes.append(Node(
+            package='nav2_collision_monitor',
+            executable='collision_monitor',
+            name='collision_monitor',
+            namespace=namespace,
+            output='screen',
+            parameters=[
+                configured_params,
+                {'SafetyStop.enabled': ParameterValue(
+                    safety_stop_enabled, value_type=bool)},
+                {'cmd_vel_in_topic': (
+                    'cmd_vel_profiled' if profiled else 'cmd_vel_smoothed')},
+            ],
+        ))
+        return nodes
+
     return LaunchDescription([
         SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '1'),
         DeclareLaunchArgument('robot_namespace', default_value='robot_0'),
@@ -71,6 +106,9 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'safety_stop_enabled', default_value='false',
             description='Enable the collision monitor stop polygon'),
+        DeclareLaunchArgument(
+            'enable_speed_profile', default_value='true',
+            description='Insert the accelerate/decelerate speed profiler'),
         Node(
             package='nav2_controller',
             executable='controller_server',
@@ -107,18 +145,7 @@ def generate_launch_description():
             ],
             **common,
         ),
-        Node(
-            package='nav2_collision_monitor',
-            executable='collision_monitor',
-            name='collision_monitor',
-            namespace=namespace,
-            output='screen',
-            parameters=[
-                configured_params,
-                {'SafetyStop.enabled': ParameterValue(
-                    safety_stop_enabled, value_type=bool)},
-            ],
-        ),
+        OpaqueFunction(function=speed_pipeline),
         Node(
             package='nav2_bt_navigator',
             executable='bt_navigator',

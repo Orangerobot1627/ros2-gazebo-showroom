@@ -149,9 +149,16 @@ energy threshold above the measured ambient noise floor, and drops a command
 repeated within 6 s. Set `wake_words:=` to empty to forward every utterance.
 
 The two motion pipelines are isolated as
-`cmd_vel_nav -> velocity_smoother -> collision_monitor -> cmd_vel`. Each
-collision monitor consumes its robot's own scan and publishes a namespaced
-state topic for the business health monitor.
+`cmd_vel_nav -> velocity_smoother -> speed_profile -> collision_monitor ->
+cmd_vel`. Each collision monitor consumes its robot's own scan and publishes a
+namespaced state topic for the business health monitor.
+
+`showroom_core/showroom_speed_profile.py` shapes the smoothed command into a
+smooth accelerate/decelerate profile: linear and angular rate limits on the way
+up and down, a velocity clamp, and a turn-dependent forward-speed reduction so
+the robot eases through corners instead of lurching. Disable it with
+`enable_speed_profile:=false` (the monitor then reads `cmd_vel_smoothed`
+directly).
 
 The collision-monitor stop polygon is a front-focused safety box. It is off by
 default because the accepted guide route passes close to the exhibit walls, so a
