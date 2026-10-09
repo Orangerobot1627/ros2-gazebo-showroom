@@ -13,6 +13,7 @@ from launch.actions import (
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
 
 
 def include(path, arguments=None, condition=None):
@@ -90,6 +91,7 @@ def generate_launch_description():
     voice_adaptive_noise = LaunchConfiguration('voice_adaptive_noise')
     voice_wake_words = LaunchConfiguration('voice_wake_words')
     rviz = LaunchConfiguration('rviz')
+    enable_pedestrian = LaunchConfiguration('enable_pedestrian')
 
     return LaunchDescription([
         DeclareLaunchArgument('headless', default_value='false'),
@@ -145,6 +147,9 @@ def generate_launch_description():
             'voice_wake_words',
             default_value='开始导览 开始 你好机器人 未来科技展馆'),
         DeclareLaunchArgument('rviz', default_value='false'),
+        DeclareLaunchArgument(
+            'enable_pedestrian', default_value='true',
+            description='Walk the showroom pedestrian back and forth'),
         include(world_launch, {
             'headless': headless,
             'software_rendering': software_rendering,
@@ -153,6 +158,14 @@ def generate_launch_description():
             'bridge_clock': 'true',
             'enable_pose_reset': enable_pose_reset,
         }),
+        Node(
+            package='showroom_gz_sim',
+            executable='showroom_pedestrian.py',
+            name='showroom_pedestrian',
+            output='screen',
+            parameters=[{'use_sim_time': True}],
+            condition=IfCondition(enable_pedestrian),
+        ),
         include(spawn_launch, {
             'namespace': 'robot_0',
             'robot_name': 'guide_robot',

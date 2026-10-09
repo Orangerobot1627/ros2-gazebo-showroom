@@ -10,6 +10,9 @@ import xml.etree.ElementTree as ET
 WIDTH_M = 50.0
 HEIGHT_M = 35.0
 WALL_HEIGHT = 2.50
+# Open-lobby line the pedestrian walks back and forth along.
+PEDESTRIAN_START = (-5.5, -10.0)
+PEDESTRIAN_END = (5.5, -10.0)
 OUTPUT = Path(__file__).resolve().parents[1] / 'worlds' / 'showroom.sdf'
 
 
@@ -215,6 +218,40 @@ def add_dynamic_test_obstacle(world):
         visual, Material('0.80 0.12 0.02 1', '1.00 0.24 0.04 1'))
 
 
+def add_pedestrian(world):
+    """
+    Add the showroom pedestrian model for the traffic walker.
+
+    The walker node drives it kinematically through the bridged
+    ``/world/showroom/set_pose`` service, back and forth along an open lobby
+    line - a moving person for the robots to notice and avoid.
+    """
+    model = sub(world, 'model', name='showroom_pedestrian')
+    start_x, start_y = PEDESTRIAN_START
+    sub(model, 'pose', f'{start_x:.3f} {start_y:.3f} 0.620 0 0 0')
+    sub(model, 'static', 'false')
+    sub(model, 'gravity', 'false')
+    sub(model, 'self_collide', 'false')
+    sub(model, 'allow_auto_disable', 'false')
+    link = sub(model, 'link', name='body')
+    inertial = sub(link, 'inertial')
+    sub(inertial, 'mass', '70.0')
+    inertia = sub(inertial, 'inertia')
+    for tag, value in (
+            ('ixx', '6.00'), ('ixy', '0'), ('ixz', '0'),
+            ('iyy', '6.00'), ('iyz', '0'), ('izz', '1.50')):
+        sub(inertia, tag, value)
+    collision = sub(link, 'collision', name='collision')
+    geometry_cylinder(collision, 0.24, 1.20)
+    body = sub(link, 'visual', name='body')
+    geometry_cylinder(body, 0.22, 1.20)
+    material_element(body, Material('0.28 0.42 0.80 1', '0.40 0.58 0.95 1'))
+    head = sub(link, 'visual', name='head')
+    sub(head, 'pose', '0 0 0.72 0 0 0')
+    geometry_cylinder(head, 0.16, 0.28)
+    material_element(head, Material('0.90 0.74 0.60 1', '1.00 0.85 0.72 1'))
+
+
 def build_world():
     sdf = ET.Element('sdf', {'version': '1.10'})
     world = sub(sdf, 'world', name='showroom')
@@ -293,6 +330,7 @@ def build_world():
             link, f'plant_{index:02d}', x, y, 0.35, 1.20, PLANT)
 
     add_dynamic_test_obstacle(world)
+    add_pedestrian(world)
     return ET.ElementTree(sdf)
 
 

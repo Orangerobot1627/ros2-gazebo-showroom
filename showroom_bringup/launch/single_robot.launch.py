@@ -13,6 +13,7 @@ from launch.actions import (
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
@@ -49,6 +50,7 @@ def generate_launch_description():
     enable_edge_learning = LaunchConfiguration('enable_edge_learning')
     edge_times_file = LaunchConfiguration('edge_times_file')
     rviz = LaunchConfiguration('rviz')
+    enable_pedestrian = LaunchConfiguration('enable_pedestrian')
 
     return LaunchDescription([
         DeclareLaunchArgument('headless', default_value='false'),
@@ -88,6 +90,17 @@ def generate_launch_description():
             'rviz',
             default_value='false',
             description='Open the Nav2 map, scan, costmap, and path view'),
+        DeclareLaunchArgument(
+            'enable_pedestrian', default_value='true',
+            description='Walk the showroom pedestrian back and forth'),
+        Node(
+            package='showroom_gz_sim',
+            executable='showroom_pedestrian.py',
+            name='showroom_pedestrian',
+            output='screen',
+            parameters=[{'use_sim_time': True}],
+            condition=IfCondition(enable_pedestrian),
+        ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(world_launch),
             launch_arguments={

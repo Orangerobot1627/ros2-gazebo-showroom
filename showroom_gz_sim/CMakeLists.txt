@@ -11,6 +11,7 @@ install(
 install(
   PROGRAMS
     scripts/generate_showroom_world.py
+    scripts/showroom_pedestrian.py
     scripts/showroom_reset_pose.py
   DESTINATION lib/${PROJECT_NAME}
 )
