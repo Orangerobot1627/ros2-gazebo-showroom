@@ -49,7 +49,13 @@ done
 source "${ros_setup}"
 source "${workspace_setup}"
 export ROS_LOG_DIR="${ROS_LOG_DIR:-$(mktemp -d -t showroom_ros_log_XXXXXX)}"
-export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-}"
+# Isolated domain + session record so cleanup ends only this run's processes.
+export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-$(( (RANDOM % 71) + 20 ))}"
+export GZ_PARTITION="showroom_domain_${ROS_DOMAIN_ID}"
+state_dir="${SHOWROOM_STATE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/showroom}"
+session="${state_dir}/session.env"
+mkdir -p "${state_dir}"
+echo ">> ROS_DOMAIN_ID=${ROS_DOMAIN_ID}"
 
 mkdir -p "${report_dir}"
 
@@ -97,14 +103,15 @@ for i in $(seq 1 "${runs}"); do
   launch_log="${report_dir}/launch_${stamp}_run${i}.log"
   report="${report_dir}/run_${stamp}_${i}.json"
 
-  ros2 launch showroom_bringup "${launch_file}" "${launch_args[@]}" \
+  setsid ros2 launch showroom_bringup "${launch_file}" "${launch_args[@]}" \
     > "${launch_log}" 2>&1 &
   launch_pid=$!
+  printf 'SHOWROOM_DOMAIN_ID=%s\nSHOWROOM_PGID=%s\nSHOWROOM_STARTED_AT=%s\n' \
+    "${ROS_DOMAIN_ID}" "${launch_pid}" "$(date -Is)" > "${session}"
 
   if ! wait_ready "${launch_log}"; then
     echo "  !! Nav2 stacks did not become ready in ${ready_timeout}s"
-    run_results+=("run ${i}: NOT_READY")
-    kill "${launch_pid}" >/dev/null 2>&1 || true
+    run_results+=("run : NOT_READY")
     stop_showroom
     continue
   fi
@@ -124,7 +131,6 @@ for i in $(seq 1 "${runs}"); do
   fi
   completed=$((completed + 1))
 
-  kill "${launch_pid}" >/dev/null 2>&1 || true
   stop_showroom
 done
 

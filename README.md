@@ -78,12 +78,16 @@ cd /home/xxl/ros2_ws/src/showroom_gz
 ./start_showroom.sh demo
 ```
 
-Stop every showroom process, including nodes that a hard terminal close can
-leave behind (a leftover node is the usual reason an extra robot or Gazebo
-model keeps appearing):
+`start_showroom.sh` refuses to start a second live instance, picks an isolated
+`ROS_DOMAIN_ID` when the caller has not set one, and records the session
+(domain + process group) under `$SHOWROOM_STATE_DIR`
+(default `${XDG_RUNTIME_DIR:-/tmp}/showroom`). The stop script then ends exactly
+that session, so a hard terminal close no longer leaves an extra robot behind
+and other ROS 2 users are left alone:
 
 ```bash
-./stop_showroom.sh
+./stop_showroom.sh          # stop the recorded session only
+./stop_showroom.sh --all    # legacy sweep of every showroom/ros2 process
 ```
 
 The default command (`manual`) is the main mode: it opens Gazebo at the entrance,
@@ -415,7 +419,8 @@ and runs the same functional and lint tests on every push and pull request.
    through it without false stops.
 4. **Voice and Qwen acceptance** — validated for Mock, Qwen, and the
    Ollama-unavailable error path.
-5. **Runtime environment management** — planned: ROS domain allocation, PID
-   files, and scoped cleanup instead of a broad `pkill`.
+5. **Runtime environment management** — done: `start_showroom.sh` allocates an
+   isolated ROS domain, records the session, and refuses a second instance;
+   `stop_showroom.sh` ends only that session (`--all` keeps the old sweep).
 6. **Visual fidelity / pedestrians** — later.
 7. **Real-robot migration** — later.
