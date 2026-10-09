@@ -34,6 +34,7 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart = LaunchConfiguration('autostart')
     safety_stop_enabled = LaunchConfiguration('safety_stop_enabled')
+    safety_slowdown_enabled = LaunchConfiguration('safety_slowdown_enabled')
     enable_speed_profile = LaunchConfiguration('enable_speed_profile')
 
     configured_params = ParameterFile(
@@ -88,6 +89,8 @@ def generate_launch_description():
             output='screen',
             parameters=[
                 configured_params,
+                {'Slowdown.enabled': ParameterValue(
+                    safety_slowdown_enabled, value_type=bool)},
                 {'SafetyStop.enabled': ParameterValue(
                     safety_stop_enabled, value_type=bool)},
                 {'cmd_vel_in_topic': (
@@ -104,8 +107,11 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         DeclareLaunchArgument('autostart', default_value='true'),
         DeclareLaunchArgument(
-            'safety_stop_enabled', default_value='false',
+            'safety_stop_enabled', default_value='true',
             description='Enable the collision monitor stop polygon'),
+        DeclareLaunchArgument(
+            'safety_slowdown_enabled', default_value='true',
+            description='Enable the collision monitor slowdown polygon'),
         DeclareLaunchArgument(
             'enable_speed_profile', default_value='true',
             description='Insert the accelerate/decelerate speed profiler'),

@@ -45,6 +45,7 @@ def generate_launch_description():
     enable_route_visualization = LaunchConfiguration(
         'enable_route_visualization')
     safety_stop = LaunchConfiguration('safety_stop_enabled')
+    safety_slowdown = LaunchConfiguration('safety_slowdown_enabled')
     enable_edge_learning = LaunchConfiguration('enable_edge_learning')
     edge_times_file = LaunchConfiguration('edge_times_file')
     rviz = LaunchConfiguration('rviz')
@@ -73,8 +74,11 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'enable_route_visualization', default_value='true'),
         DeclareLaunchArgument(
-            'safety_stop_enabled', default_value='false',
+            'safety_stop_enabled', default_value='true',
             description='Enable the collision monitor stop polygon'),
+        DeclareLaunchArgument(
+            'safety_slowdown_enabled', default_value='true',
+            description='Enable the collision monitor slowdown polygon'),
         DeclareLaunchArgument(
             'enable_edge_learning', default_value='false',
             description='Record edge traversal times for route cost learning'),
@@ -117,6 +121,7 @@ def generate_launch_description():
                     condition=IfCondition(navigation),
                     launch_arguments={
                         'safety_stop_enabled': safety_stop,
+                        'safety_slowdown_enabled': safety_slowdown,
                     }.items(),
                 ),
             ],

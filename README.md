@@ -196,15 +196,21 @@ ros2 launch showroom_bringup single_robot.launch.py \
 The recorder learns an exponential moving average of the seconds each
 directed edge takes and the gateway folds it into the `learned` profile.
 
-The collision-monitor stop polygon is a front-focused safety box. It is off by
-default because the accepted guide route passes close to the exhibit walls, so a
-wide side margin makes the robot pause on the panels while Nav2's costmap
-already avoids obstacles. Enable it for a blocked/clearance demonstration with
-`safety_stop_enabled:=true`:
+The collision monitor runs a two-layer forward safety strip by default:
+
+- `Slowdown` (0.75 m ahead, about 50% speed): eases past a close obstacle
+  instead of stopping.
+- `SafetyStop` (0.38 m ahead): stops before contact.
+
+Both polygons are deliberately forward-only strips. A footprint-sized box
+false-stopped the guide route because the robot brushes past exhibit panels to
+within about 0.24 m, so the wide side edge caught them; the forward strip keeps
+the front protection without the side false stops. Turn a layer off with
+`safety_slowdown_enabled:=false` / `safety_stop_enabled:=false`:
 
 ```bash
 ros2 launch showroom_bringup single_robot.launch.py \
-  headless:=true guide_autostart:=true safety_stop_enabled:=true
+  headless:=true guide_autostart:=true safety_stop_enabled:=false
 ```
 
 The accepted Stage behaviour is preserved and covered by tests: the 65-waypoint
@@ -405,8 +411,9 @@ and runs the same functional and lint tests on every push and pull request.
    guide route's remaining brief `Failed to make progress` hiccups coincide
    with the coffee robot crossing the corridor, so dual-robot avoidance is the
    next focus.
-3. **Safety-stop strategy** — planned: a two-layer slowdown/stop polygon so the
-   collision monitor can be enabled by default.
+3. **Safety-stop strategy** — done: a two-layer forward safety strip
+   (slowdown + stop) is on by default, and the guide and coffee routes run
+   through it without false stops.
 4. **Voice and Qwen acceptance** — validated for Mock, Qwen, and the
    Ollama-unavailable error path.
 5. **Runtime environment management** — planned: ROS domain allocation, PID

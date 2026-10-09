@@ -8,6 +8,7 @@ synthetic phase events excluded, the terminal route_completed flag, the
 recovery/safety maxima and the minimum lidar clearance.
 """
 
+import json
 import os
 from pathlib import Path
 import sys
@@ -19,13 +20,10 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 # Keep ROS logs writable even when $HOME is read-only (sandboxed CI).
 os.environ.setdefault('ROS_LOG_DIR', tempfile.mkdtemp(prefix='showroom_ros_log_'))
 
-import json  # noqa: E402
-
 import rclpy  # noqa: E402
 from sensor_msgs.msg import LaserScan  # noqa: E402
-from std_msgs.msg import String  # noqa: E402
-
 from showroom_acceptance import AcceptanceRecorder  # noqa: E402
+from std_msgs.msg import String  # noqa: E402
 
 
 def event(**fields):

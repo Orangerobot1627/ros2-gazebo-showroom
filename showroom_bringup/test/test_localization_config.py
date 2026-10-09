@@ -88,6 +88,9 @@ def main():
     assert collision_monitor['cmd_vel_out_topic'] == 'cmd_vel'
     assert collision_monitor['scan']['topic'] == '/robot_0/scan'
     assert collision_monitor['SafetyStop']['action_type'] == 'stop'
+    assert collision_monitor['polygons'] == ['Slowdown', 'SafetyStop']
+    assert collision_monitor['Slowdown']['action_type'] == 'slowdown'
+    assert collision_monitor['Slowdown']['slowdown_ratio'] < 1.0
 
     robot_1_params = yaml.safe_load(
         ROBOT_1_PARAMS.read_text(encoding='utf-8'))
@@ -117,6 +120,7 @@ def main():
         'robot_1/base_footprint')
     assert robot_1_collision_monitor['odom_frame_id'] == 'robot_1/odom'
     assert robot_1_collision_monitor['scan']['topic'] == '/robot_1/scan'
+    assert robot_1_collision_monitor['polygons'] == ['Slowdown', 'SafetyStop']
 
     navigation_launch = NAVIGATION_LAUNCH.read_text(encoding='utf-8')
     assert "package='nav2_collision_monitor'" in navigation_launch

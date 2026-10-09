@@ -39,6 +39,7 @@ while [[ $# -gt 0 ]]; do
     --ready-timeout) ready_timeout="$2"; shift 2 ;;
     --rtf) rtf="$2"; shift 2 ;;
     --launch) launch_file="$2"; shift 2 ;;
+    --launch-arg) launch_args+=("$2"); shift 2 ;;
     --min-success-rate) min_success="$2"; shift 2 ;;
     -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) echo "Unknown option: $1" >&2; exit 2 ;;
