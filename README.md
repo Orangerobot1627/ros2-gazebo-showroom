@@ -391,12 +391,20 @@ and runs the same functional and lint tests on every push and pull request.
 
 ### Delivery roadmap
 
-1. **Repeatable acceptance baseline** — lint is clean, CI is in place, the
-   unified test and acceptance commands are added; the blue-route soak is being
-   measured.
+1. **Repeatable acceptance baseline** — lint is clean, CI is in place, and the
+   unified test/acceptance commands are added. The 10-run guide soak exposed a
+   real bug: the **global costmap re-injected live scan obstacles**, so NavFn
+   could not plan from otherwise-open poses and ended the mission with
+   `status=6`. Planning on the static map only (real obstacles stay in the
+   local costmap for DWB) removed every real route failure: the guide route now
+   completes 64/64. Faster-than-real-time runs (`--rtf`) can add a timing
+   artifact (action-server ack / TF lapse), which is why reliability is
+   measured at or near real time.
 2. **Coffee delivery and dual-robot acceptance** — a coffee delivery to
-   `technology_history` completes end to end and returns to standby; per-target
-   and concurrent runs still need soaking.
+   `technology_history` completes end to end and returns to standby. The
+   guide route's remaining brief `Failed to make progress` hiccups coincide
+   with the coffee robot crossing the corridor, so dual-robot avoidance is the
+   next focus.
 3. **Safety-stop strategy** — planned: a two-layer slowdown/stop polygon so the
    collision monitor can be enabled by default.
 4. **Voice and Qwen acceptance** — validated for Mock, Qwen, and the
