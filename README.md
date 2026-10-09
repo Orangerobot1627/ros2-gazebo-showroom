@@ -361,6 +361,7 @@ Three repository-level entry points make the demo reproducible:
 
 ./run_acceptance.sh                      # one guided run for robot_0
 ./run_acceptance.sh --runs 10            # ten runs + success-rate summary
+./run_acceptance.sh --runs 10 --rtf 3    # ten runs faster than real time
 ./run_acceptance.sh --robot robot_1 \
   --command '{"intent":"deliver_drink","drink":"coffee","target":"lounge"}'
 
@@ -375,7 +376,10 @@ Three repository-level entry points make the demo reproducible:
 waypoints reached, failed targets, Nav2 recoveries, safety interventions,
 duration, minimum lidar clearance, and whether `route_completed` was seen.
 The recorder exits 0 only on a completed route, so a loop can measure the
-success rate directly.
+success rate directly. Because a run is finally limited by Gazebo's real time,
+`--rtf N` loads a copy of the world with a higher `<real_time_factor>`: Nav2
+still plans in simulation time, so the route is identical while the wall clock
+shrinks (about 3x at `--rtf 3`).
 
 `run_voice_acceptance.sh` drives a fixed command set through
 `/showroom/user_text` and records the recognised intent, the whitelist
