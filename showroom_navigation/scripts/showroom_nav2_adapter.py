@@ -38,6 +38,7 @@ class ShowroomNav2Adapter(Node):
         self.declare_parameter('goal_reject_retry_delay_sec', 0.5)
         self.declare_parameter('target_failure_retry_limit', 2)
         self.declare_parameter('target_failure_retry_delay_sec', 1.5)
+        self.declare_parameter('delivery_dwell_sec', 30.0)
         self.declare_parameter(
             'collision_state_topic', 'collision_monitor_state')
         self.declare_parameter('cmd_vel_topic', 'cmd_vel')
@@ -525,6 +526,9 @@ class ShowroomNav2Adapter(Node):
         self.target_index += 1
         if self.target_index < len(self.targets):
             delay = float(self.get_parameter('inter_goal_delay_sec').value)
+            if target.get('mission_phase') == 'delivery':
+                # Give the drop-off a service dwell before starting the return.
+                delay = float(self.get_parameter('delivery_dwell_sec').value)
             self.inter_goal_timer = self.create_timer(
                 max(0.1, delay), self.send_delayed_target)
             return

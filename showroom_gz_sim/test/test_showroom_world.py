@@ -44,8 +44,8 @@ def main():
 
     collisions = link.findall('./collision')
     visuals = link.findall('./visual')
-    assert len(collisions) == 77
-    assert len(visuals) == 84
+    assert len(collisions) == 75
+    assert len(visuals) == 82
 
     obstacle = world.find("./model[@name='test_obstacle']")
     assert obstacle is not None

@@ -675,19 +675,19 @@
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <collision name="dance_south_west_collision">
-          <pose>10.000 3.500 1.250 0 0 0.000000</pose>
+        <collision name="dance_lounge_west_collision">
+          <pose>10.250 3.000 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
-              <size>4.000 0.300 2.500</size>
+              <size>4.500 0.300 2.500</size>
             </box>
           </geometry>
         </collision>
-        <visual name="dance_south_west_visual">
-          <pose>10.000 3.500 1.250 0 0 0.000000</pose>
+        <visual name="dance_lounge_west_visual">
+          <pose>10.250 3.000 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
-              <size>4.000 0.300 2.500</size>
+              <size>4.500 0.300 2.500</size>
             </box>
           </geometry>
           <material>
@@ -697,19 +697,19 @@
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <collision name="dance_south_east_collision">
-          <pose>19.850 3.500 1.250 0 0 0.000000</pose>
+        <collision name="dance_lounge_east_collision">
+          <pose>20.600 3.000 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
-              <size>9.700 0.300 2.500</size>
+              <size>8.200 0.300 2.500</size>
             </box>
           </geometry>
         </collision>
-        <visual name="dance_south_east_visual">
-          <pose>19.850 3.500 1.250 0 0 0.000000</pose>
+        <visual name="dance_lounge_east_visual">
+          <pose>20.600 3.000 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
-              <size>9.700 0.300 2.500</size>
+              <size>8.200 0.300 2.500</size>
             </box>
           </geometry>
           <material>
@@ -720,18 +720,18 @@
           <cast_shadows>true</cast_shadows>
         </visual>
         <collision name="dance_west_south_collision">
-          <pose>8.000 7.150 1.250 0 0 0.000000</pose>
+          <pose>8.000 6.900 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
-              <size>0.300 7.300 2.500</size>
+              <size>0.300 7.800 2.500</size>
             </box>
           </geometry>
         </collision>
         <visual name="dance_west_south_visual">
-          <pose>8.000 7.150 1.250 0 0 0.000000</pose>
+          <pose>8.000 6.900 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
-              <size>0.300 7.300 2.500</size>
+              <size>0.300 7.800 2.500</size>
             </box>
           </geometry>
           <material>
@@ -763,52 +763,8 @@
           </material>
           <cast_shadows>true</cast_shadows>
         </visual>
-        <collision name="lounge_north_west_collision">
-          <pose>11.500 2.500 1.250 0 0 0.000000</pose>
-          <geometry>
-            <box>
-              <size>5.000 0.300 2.500</size>
-            </box>
-          </geometry>
-        </collision>
-        <visual name="lounge_north_west_visual">
-          <pose>11.500 2.500 1.250 0 0 0.000000</pose>
-          <geometry>
-            <box>
-              <size>5.000 0.300 2.500</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>0.52 0.56 0.62 1</ambient>
-            <diffuse>0.70 0.74 0.80 1</diffuse>
-            <specular>0.08 0.08 0.08 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
-        <collision name="lounge_north_east_collision">
-          <pose>20.850 2.500 1.250 0 0 0.000000</pose>
-          <geometry>
-            <box>
-              <size>7.700 0.300 2.500</size>
-            </box>
-          </geometry>
-        </collision>
-        <visual name="lounge_north_east_visual">
-          <pose>20.850 2.500 1.250 0 0 0.000000</pose>
-          <geometry>
-            <box>
-              <size>7.700 0.300 2.500</size>
-            </box>
-          </geometry>
-          <material>
-            <ambient>0.52 0.56 0.62 1</ambient>
-            <diffuse>0.70 0.74 0.80 1</diffuse>
-            <specular>0.08 0.08 0.08 1</specular>
-          </material>
-          <cast_shadows>true</cast_shadows>
-        </visual>
         <collision name="lounge_west_south_collision">
-          <pose>9.000 -11.500 1.250 0 0 0.000000</pose>
+          <pose>8.000 -11.500 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
               <size>0.300 4.600 2.500</size>
@@ -816,7 +772,7 @@
           </geometry>
         </collision>
         <visual name="lounge_west_south_visual">
-          <pose>9.000 -11.500 1.250 0 0 0.000000</pose>
+          <pose>8.000 -11.500 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
               <size>0.300 4.600 2.500</size>
@@ -830,18 +786,18 @@
           <cast_shadows>true</cast_shadows>
         </visual>
         <collision name="lounge_west_north_collision">
-          <pose>9.000 -1.900 1.250 0 0 0.000000</pose>
+          <pose>8.000 -1.650 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
-              <size>0.300 8.800 2.500</size>
+              <size>0.300 9.300 2.500</size>
             </box>
           </geometry>
         </collision>
         <visual name="lounge_west_north_visual">
-          <pose>9.000 -1.900 1.250 0 0 0.000000</pose>
+          <pose>8.000 -1.650 1.250 0 0 0.000000</pose>
           <geometry>
             <box>
-              <size>0.300 8.800 2.500</size>
+              <size>0.300 9.300 2.500</size>
             </box>
           </geometry>
           <material>

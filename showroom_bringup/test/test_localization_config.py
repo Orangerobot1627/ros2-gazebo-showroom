@@ -44,8 +44,12 @@ def main():
     assert map_data['resolution'] == 0.05
     assert map_data['origin'] == [-25.0, -17.5, 0.0]
     assert pgm_dimensions(MAP_IMAGE) == (1000, 700)
-    if STAGE_IMAGE.exists():
-        assert digest(MAP_IMAGE) == digest(STAGE_IMAGE)
+    # The map is a Gazebo-authored refinement of the Stage map: the east
+    # dance/lounge partition was merged from two offset walls into one aligned
+    # wall with a centred door (see generate_showroom_world.py), so it no
+    # longer hashes equal to the Stage baseline. Resolution, origin, and
+    # dimensions above still pin the accepted frame.
+    assert MAP_IMAGE.exists()
 
     params = yaml.safe_load(PARAMS.read_text(encoding='utf-8'))
     amcl = params['/robot_0/amcl']['ros__parameters']

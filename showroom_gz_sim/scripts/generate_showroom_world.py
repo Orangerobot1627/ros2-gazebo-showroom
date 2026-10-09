@@ -128,14 +128,15 @@ WALLS = [
                   material=TUNNEL_WALL),
     vertical_wall('tunnel_baffle_east', 2.0, 13.0, 16.8, 0.25,
                   material=TUNNEL_WALL),
-    horizontal_wall('dance_south_west', 3.5, 8.0, 12.0),
-    horizontal_wall('dance_south_east', 3.5, 15.0, 24.7),
-    vertical_wall('dance_west_south', 8.0, 3.5, 10.8),
+    # Dance/lounge partition: one aligned wall with a single centred door.
+    # It used to be two walls 1 m apart (y=3.5 and y=2.5) with doors offset by
+    # 2 m, which made the robot zig-zag through a sliver; merge them at y=3.0.
+    horizontal_wall('dance_lounge_west', 3.0, 8.0, 12.5),
+    horizontal_wall('dance_lounge_east', 3.0, 16.5, 24.7),
+    vertical_wall('dance_west_south', 8.0, 3.0, 10.8),
     vertical_wall('dance_west_north', 8.0, 13.2, 16.8),
-    horizontal_wall('lounge_north_west', 2.5, 9.0, 14.0),
-    horizontal_wall('lounge_north_east', 2.5, 17.0, 24.7),
-    vertical_wall('lounge_west_south', 9.0, -13.8, -9.2),
-    vertical_wall('lounge_west_north', 9.0, -6.3, 2.5),
+    vertical_wall('lounge_west_south', 8.0, -13.8, -9.2),
+    vertical_wall('lounge_west_north', 8.0, -6.3, 3.0),
 ]
 
 
