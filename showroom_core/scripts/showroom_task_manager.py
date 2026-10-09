@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import math
 from pathlib import Path
 import time
 
@@ -55,6 +56,10 @@ class ShowroomTaskManager(Node):
             'navigation_event_topic', '/showroom/navigation_events')
         self.declare_parameter(
             'announcement_topic', '/showroom/announcements')
+        self.declare_parameter('monitor_topic', '/showroom/monitor')
+        self.declare_parameter('yield_enabled', True)
+        self.declare_parameter('yield_distance_m', 2.0)
+        self.declare_parameter('yield_release_m', 2.6)
         self.declare_parameter('coffee_trigger', 'tunnel_center_south')
         self.declare_parameter('auto_start', True)
         self.declare_parameter('auto_start_delay_sec', 3.0)
@@ -166,6 +171,24 @@ class ShowroomTaskManager(Node):
         )
         self.create_timer(1.0, self.publish_periodic_status)
         self.create_timer(0.2, self.expire_overrides)
+
+        # Guide-priority right of way: the coffee robot yields when the guide
+        # comes within yield_distance_m and resumes once it clears
+        # yield_release_m. Both poses come from the aggregate monitor stream.
+        self.robot_poses = {}
+        self.coffee_yielding = False
+        monitor_qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        )
+        self.create_subscription(
+            String,
+            self.get_parameter('monitor_topic').value,
+            self.monitor_callback,
+            monitor_qos,
+        )
+        self.create_timer(0.5, self.evaluate_yield)
         self.task_action_server = ActionServer(
             self,
             ExecuteShowroomTask,
@@ -191,6 +214,65 @@ class ShowroomTaskManager(Node):
 
     def timestamp(self):
         return self.get_clock().now().nanoseconds / 1e9
+
+    def monitor_callback(self, message):
+        """Cache each robot's global pose from the aggregate monitor stream."""
+        try:
+            document = json.loads(message.data)
+        except (json.JSONDecodeError, TypeError):
+            return
+        robots = document.get('robots')
+        if not isinstance(robots, dict):
+            return
+        for robot_id, snapshot in robots.items():
+            if not isinstance(snapshot, dict):
+                continue
+            pose = snapshot.get('pose')
+            if isinstance(pose, dict) and 'x' in pose and 'y' in pose:
+                self.robot_poses[robot_id] = (
+                    float(pose['x']), float(pose['y']))
+
+    def evaluate_yield(self):
+        """Hold the lower-priority coffee robot when the guide is close."""
+        if not self.get_parameter('yield_enabled').value:
+            return
+        coffee_active = self.logic.coffee_state in ACTIVE_COFFEE_STATES
+        guide_active = self.logic.guide_state in ACTIVE_GUIDE_STATES
+        if not (coffee_active and guide_active):
+            if self.coffee_yielding and not coffee_active:
+                self.coffee_yielding = False
+            return
+        guide = self.robot_poses.get('robot_0')
+        coffee = self.robot_poses.get('robot_1')
+        if guide is None or coffee is None:
+            return
+        distance = math.hypot(guide[0] - coffee[0], guide[1] - coffee[1])
+        hold = float(self.get_parameter('yield_distance_m').value)
+        release = float(self.get_parameter('yield_release_m').value)
+        if not self.coffee_yielding and distance < hold:
+            if self.logic.coffee_state == 'PAUSED':
+                return
+            try:
+                effects = self.logic.pause_robot('robot_1')
+            except ValueError:
+                return
+            self.apply_effects(effects)
+            self.coffee_yielding = True
+            self.get_logger().info(
+                f'Coffee robot yields to the guide ({distance:.2f} m)')
+        elif self.coffee_yielding and distance > release:
+            if self.logic.coffee_state != 'PAUSED':
+                self.coffee_yielding = False
+                return
+            try:
+                effects = self.logic.resume_robot('robot_1')
+            except ValueError:
+                self.coffee_yielding = False
+                return
+            self.apply_effects(effects)
+            self.coffee_yielding = False
+            self.get_logger().info(
+                f'Coffee robot resumes; guide cleared ({distance:.2f} m)')
 
     def publish_json(self, publisher, document):
         payload = dict(document)

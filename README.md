@@ -406,11 +406,10 @@ and runs the same functional and lint tests on every push and pull request.
    completes 64/64. Faster-than-real-time runs (`--rtf`) can add a timing
    artifact (action-server ack / TF lapse), which is why reliability is
    measured at or near real time.
-2. **Coffee delivery and dual-robot acceptance** — a coffee delivery to
-   `technology_history` completes end to end and returns to standby. The
-   guide route's remaining brief `Failed to make progress` hiccups coincide
-   with the coffee robot crossing the corridor, so dual-robot avoidance is the
-   next focus.
+2. **Coffee delivery and dual-robot acceptance** — coffee deliveries complete
+   end to end and return to standby. The task manager now gives the guide
+   right of way: the coffee robot holds while the two robots are within 2 m and
+   resumes once the guide clears 2.6 m (guide-priority yield).
 3. **Safety-stop strategy** — done: a two-layer forward safety strip
    (slowdown + stop) is on by default, and the guide and coffee routes run
    through it without false stops.

@@ -48,7 +48,8 @@ if(BUILD_TESTING)
       priority
       speed_profile
       task_action
-      task_units)
+      task_units
+      yield)
     ament_add_test(
       showroom_core_${test_name}
       COMMAND ${Python3_EXECUTABLE}
