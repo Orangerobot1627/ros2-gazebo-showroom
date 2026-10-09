@@ -34,6 +34,8 @@ def generate_launch_description():
 
     world_launch = os.path.join(
         simulation_share, 'launch', 'showroom_world.launch.py')
+    default_world = os.path.join(
+        simulation_share, 'worlds', 'showroom.sdf')
     spawn_launch = os.path.join(
         simulation_share, 'launch', 'spawn_robot.launch.py')
     localization_launch = os.path.join(
@@ -60,6 +62,7 @@ def generate_launch_description():
     headless = LaunchConfiguration('headless')
     software_rendering = LaunchConfiguration('software_rendering')
     verbosity = LaunchConfiguration('verbosity')
+    world_file = LaunchConfiguration('world_file')
     guide_autostart = LaunchConfiguration('guide_autostart')
     business_mode = LaunchConfiguration('business_mode')
     business_auto_start = LaunchConfiguration('business_auto_start')
@@ -91,6 +94,10 @@ def generate_launch_description():
         DeclareLaunchArgument('headless', default_value='false'),
         DeclareLaunchArgument('software_rendering', default_value='true'),
         DeclareLaunchArgument('verbosity', default_value='2'),
+        DeclareLaunchArgument(
+            'world_file', default_value=default_world,
+            description='World SDF to load (a higher real_time_factor runs '
+                        'the headless acceptance soak faster than real time).'),
         DeclareLaunchArgument('guide_autostart', default_value='false'),
         DeclareLaunchArgument('business_mode', default_value='true'),
         DeclareLaunchArgument('business_auto_start', default_value='false'),
@@ -138,6 +145,7 @@ def generate_launch_description():
             'headless': headless,
             'software_rendering': software_rendering,
             'verbosity': verbosity,
+            'world_file': world_file,
             'bridge_clock': 'true',
             'enable_pose_reset': enable_pose_reset,
         }),

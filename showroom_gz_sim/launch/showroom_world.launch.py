@@ -28,6 +28,7 @@ def generate_launch_description():
 
     headless = LaunchConfiguration('headless')
     verbosity = LaunchConfiguration('verbosity')
+    world_file = LaunchConfiguration('world_file')
     bridge_clock = LaunchConfiguration('bridge_clock')
     enable_pose_reset = LaunchConfiguration('enable_pose_reset')
     software_rendering = LaunchConfiguration('software_rendering')
@@ -38,7 +39,7 @@ def generate_launch_description():
             'gz_args': [
                 '-r -v ', verbosity,
                 ' --gui-config ', gui_config,
-                ' ', world,
+                ' ', world_file,
             ],
             'on_exit_shutdown': 'true',
         }.items(),
@@ -47,7 +48,7 @@ def generate_launch_description():
     gazebo_headless = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(gazebo_launch),
         launch_arguments={
-            'gz_args': ['-r -s -v ', verbosity, ' ', world],
+            'gz_args': ['-r -s -v ', verbosity, ' ', world_file],
             'on_exit_shutdown': 'true',
         }.items(),
         condition=IfCondition(headless),
@@ -78,6 +79,10 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'headless', default_value='false',
             description='Run only the Gazebo server without its GUI.'),
+        DeclareLaunchArgument(
+            'world_file', default_value=world,
+            description='World SDF to load. A higher <real_time_factor> runs '
+                        'the headless acceptance soak faster than real time.'),
         DeclareLaunchArgument(
             'verbosity', default_value='2',
             description='Gazebo console verbosity from 0 to 4.'),

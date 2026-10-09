@@ -22,6 +22,7 @@ command='{"intent":"start_tour"}'
 timeout_sec=900
 ready_lines=5
 ready_timeout=150
+rtf='1.0'
 launch_file='dual_robot.launch.py'
 launch_args=(headless:=true rviz:=false business_auto_start:=false enable_llm:=false)
 min_success=''
@@ -36,6 +37,7 @@ while [[ $# -gt 0 ]]; do
     --timeout) timeout_sec="$2"; shift 2 ;;
     --ready-lines) ready_lines="$2"; shift 2 ;;
     --ready-timeout) ready_timeout="$2"; shift 2 ;;
+    --rtf) rtf="$2"; shift 2 ;;
     --launch) launch_file="$2"; shift 2 ;;
     --min-success-rate) min_success="$2"; shift 2 ;;
     -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
@@ -49,6 +51,18 @@ export ROS_LOG_DIR="${ROS_LOG_DIR:-$(mktemp -d -t showroom_ros_log_XXXXXX)}"
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-}"
 
 mkdir -p "${report_dir}"
+
+# Optional faster-than-real-time soak: point Gazebo at a copy of the world
+# whose <real_time_factor> is raised. Nav2 still plans in simulation time, so
+# the route behaves identically while the wall clock shrinks.
+if awk "BEGIN{exit !(${rtf} > 1.0)}"; then
+  base_world="$(ros2 pkg prefix showroom_gz_sim 2>/dev/null)/share/showroom_gz_sim/worlds/showroom.sdf"
+  fast_world="${report_dir}/showroom_rtf${rtf}.sdf"
+  sed "s#<real_time_factor>[0-9.]*</real_time_factor>#<real_time_factor>${rtf}</real_time_factor>#" \
+    "${base_world}" > "${fast_world}"
+  launch_args+=("world_file:=${fast_world}")
+fi
+echo ">> real_time_factor=${rtf}"
 
 stop_showroom() {
   # Best-effort cleanup; the workspace ships stop_showroom.sh for this.
