@@ -73,6 +73,14 @@ def main():
     assert local['obstacle_layer']['scan']['topic'] == '/robot_0/scan'
     assert global_map['global_frame'] == 'map'
     assert global_map['static_layer']['map_topic'] == '/map'
+    # The global costmap must plan on the static map only. A live obstacle
+    # layer here re-injects phantom scan obstacles and makes NavFn fail to plan
+    # from otherwise open poses (the guide-route outages at history_panel_7 and
+    # dance_loop_close). Live obstacles belong to the local costmap, which DWB
+    # already consumes.
+    assert 'static_layer' in global_map['plugins']
+    assert 'obstacle_layer' not in global_map['plugins']
+    assert 'obstacle_layer' in local['plugins']
     assert planner['GridBased']['use_astar'] is True
     assert collision_monitor['base_frame_id'] == 'robot_0/base_footprint'
     assert collision_monitor['odom_frame_id'] == 'robot_0/odom'
@@ -95,11 +103,16 @@ def main():
     robot_1_local = (
         robot_1_navigation['local_costmap']['local_costmap'][
             'ros__parameters'])
+    robot_1_global = (
+        robot_1_navigation['global_costmap']['global_costmap'][
+            'ros__parameters'])
     robot_1_collision_monitor = (
         robot_1_navigation['collision_monitor']['ros__parameters'])
     assert robot_1_bt['robot_base_frame'] == 'robot_1/base_footprint'
     assert robot_1_bt['odom_topic'] == '/robot_1/odom'
     assert robot_1_local['obstacle_layer']['scan']['topic'] == '/robot_1/scan'
+    assert 'obstacle_layer' not in robot_1_global['plugins']
+    assert 'static_layer' in robot_1_global['plugins']
     assert robot_1_collision_monitor['base_frame_id'] == (
         'robot_1/base_footprint')
     assert robot_1_collision_monitor['odom_frame_id'] == 'robot_1/odom'
